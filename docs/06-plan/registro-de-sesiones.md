@@ -1261,3 +1261,14 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Verificado (API, producción):** sin seguir, el post de Jorge llega al feed de Cesar con `source: RECOMMENDED`; seguir/dejar de seguir y `followedByMe` funcionan. Typecheck y tests del frontend (78) y de social-service (19) pasan.
 - **NO verificado:** la interfaz con sesión iniciada (no se escribieron credenciales en el navegador de producción) y la subida real de la foto; el APK no se recompiló, no incluye estos cambios.
 - **Abierto:** recompilar el APK; el sugeridor `follow-suggester` sigue sin modelo (lista vacía).
+
+### 2026-11-09 (tarde) — Responsive del panel admin, detalle de evento móvil, confirmación al participar y teclado en login/registro
+
+**Agente:** Claude Code · **Repos:** `bandadau-admin` (`5d8be2c`, shell), `bandadau-frontend` (`c019fba`), `bandadau-docs`.
+
+- **Panel admin (shell):** había scroll horizontal en móvil (dashboard 570 px en pantalla de 375; usuarios, eventos, sagas y universidades también). Causas: rejillas sin columnas explícitas, tabla `sr-only` del gráfico y etiquetas `sr-only` fuera de un contenedor posicionado. Ahora todas las rutas miden 375/375. `DataTable` muestra tarjetas «etiqueta: valor» bajo `md` y tabla desde `md`; los campos usan 16 px en móvil (Safari de iPhone hacía zoom al enfocar); alturas `dvh`; el menú móvil bloquea el scroll de fondo y cierra con Escape. Publicado en `admin.bandadau.lat`.
+- **App, detalle de evento:** el web forzaba dos columnas (panel fijo de 400 px) en cualquier ancho; bajo 900 px usa ahora la columna única con barra inferior de CTA.
+- **App, confirmación:** nuevo `ConfirmModal` (mismo diseño que `PaymentModal`); «Participar» abre «¿Estás seguro?» con título del evento y créditos (o «Es gratis») y solo «Sí, participar» lanza la SAGA.
+- **App, login/registro/verificación:** `autoComplete`/`textContentType` correctos (`username`, `current-password`, `new-password`, `one-time-code`), tecla Siguiente/Ir con foco encadenado y envío al pulsar Ir, teclados de email/numérico, `autoCorrect` apagado, campos de 16 px, `KeyboardAwareScrollView` y `interactive-widget=resizes-content` en el viewport web. Publicado en `app.bandadau.lat`.
+- **Verificado:** en navegador a 375 px contra el mock local (panel, detalle, modal, flujo hasta la entrada) y atributos de los campos en el DOM; typecheck, lint y tests (78) pasan.
+- **NO verificado:** teclado en dispositivos físicos (iOS/Android nativo y Safari/Chrome móvil reales); los microfrontends del panel (moderación Angular, insights React) no se revisaron en móvil; el APK no se recompiló.
