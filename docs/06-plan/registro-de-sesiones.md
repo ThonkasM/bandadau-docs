@@ -1273,3 +1273,11 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Verificado:** en navegador a 375 px contra el mock local (panel, detalle, modal, flujo hasta la entrada) y atributos de los campos en el DOM; typecheck, lint y tests (78) pasan.
 - **NO verificado:** teclado en dispositivos físicos (iOS/Android nativo y Safari/Chrome móvil reales); el APK no se recompiló.
 - **Microfrontends (0.1.1, publicados):** `mfe-moderation` — en una columna el detalle queda ~900 px bajo la lista; ahora se lleva a la vista al elegir (con margen bajo la cabecera), el título duplicado queda solo para lectores de pantalla y los atajos de teclado se ocultan en táctil. Ambos MFEs: `select`/`textarea` de 16 px en táctil (`pointer: coarse`) para evitar el zoom de iOS. `mfe-insights` se revisó solo con el mock (muestra su estado de «fase 2»); su contenido real no se pudo ver en móvil. Commits `bandadau-admin` `2548e1a` y `1966573`.
+
+### 2026-11-09 (noche) — Corrección: el teclado se cerraba al escribir en login/registro
+
+**Agente:** Claude Code · **Repo:** `bandadau-frontend` (`d881891`).
+
+- **Regresión mía:** tras el cambio de teclado de la sesión anterior, al escribir se cerraba el teclado. Comparado con `homy-frontend/app/(auth)`: Homy separa native y web (web sin `keyboard-controller`) y no usa `keyboardDismissMode`.
+- **Corrección:** `AuthLayout` por plataforma (`auth-layout.tsx` nativo con `KeyboardAwareScrollView`, `bottomOffset` 24 iOS / 50 Android, sin `keyboardDismissMode`; `auth-layout.web.tsx` con `ScrollView` simple); se revierte `interactive-widget=resizes-content`/`viewport-fit=cover` del meta viewport; el email del login usa `autoComplete=email`/`textContentType=emailAddress` como en Homy. Publicado en `app.bandadau.lat`.
+- **Verificado:** en navegador a 375 px se escribe sin pérdida de foco y Enter pasa al siguiente campo. **NO verificado:** el teclado real en iOS/Android (no se pudo reproducir el cierre en emulación; la causa exacta no está confirmada, se volvió al patrón de Homy). Typecheck y 78 tests pasan.
