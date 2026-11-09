@@ -1,8 +1,8 @@
 openapi: 3.1.0
 info:
   title: Bandada U — ticketing-service (estadísticas internas)
-  version: 1.0.0
-  summary: Lector interno de estadísticas de tickets para las herramientas MCP del panel.
+  version: 1.1.0
+  summary: Lector interno de estadísticas y de validaciones de tickets para las herramientas MCP y el panel.
   description: |
     Complemento **interno** de `ticketing-service.yaml` (mismo servicio, `ticketing-service`, NestJS 11, Clean Architecture,
     DynamoDB `bandada-ticketing`). Vive en un archivo aparte para no mezclar este contrato con los cambios pendientes de
@@ -15,6 +15,7 @@ info:
     - Errores RFC 9457 con `code` estable (`INVALID_RANGE` en `400`).
 
     ## Changelog
+    - 1.1.0 (2026-11-09): `GET /internal/v1/validations` (`listTicketValidations`): quién escaneó cada entrada y cuándo (`usedBy`/`usedAt`), para el reporte de asistencia del panel. Incluye identificadores de usuario (`attendeeId`, `validatedBy`): solo ADMIN a través del gateway, nunca MCP.
     - 1.0.0 (2026-10-16): `GET /internal/v1/stats/tickets` (`getTicketStats`) para la herramienta MCP `get_ticket_stats` y el criterio `ATTENDANCE` de `get_event_ranking`.
   contact:
     name: Grupo 24 — Ingeniería de Software II
@@ -91,8 +92,121 @@ paths:
           $ref: './shared/components.yaml#/components/responses/Unauthorized'
         '403':
           $ref: './shared/components.yaml#/components/responses/Forbidden'
+  /internal/v1/validations:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    get:
+      tags: [internal]
+      operationId: listTicketValidations
+      summary: Entradas validadas en la puerta (interno)
+      description: |
+        Lista las entradas **validadas** (`USED`) cuya validación (`usedAt`) cae entre `from` y `to` (UTC, inclusivo), de la
+        más reciente a la más antigua: qué evento, de quién era la entrada (`attendeeId`) y quién la escaneó (`validatedBy`,
+        el `usedBy` del ticket: un `ORGANIZER` del evento o un `ADMIN`). `eventId` limita a un evento. `limit` por defecto 100,
+        máximo 500. Rango máximo 366 días; `from` ≤ `to`, si no → `400` `INVALID_RANGE`. La lectura es un `Scan` filtrado y
+        acotado (tope de 20 000 tickets); si se alcanza el tope, `truncated: true`. Exige el scope `internal:read`.
+        Los nombres no vienen aquí: el gateway los resuelve con identity.
+      security:
+        - serviceAuth: []
+      parameters:
+        - name: from
+          in: query
+          required: true
+          description: Inicio inclusivo (UTC), `YYYY-MM-DD`.
+          schema:
+            type: string
+            format: date
+        - name: to
+          in: query
+          required: true
+          description: Fin inclusivo (UTC), `YYYY-MM-DD`.
+          schema:
+            type: string
+            format: date
+        - name: eventId
+          in: query
+          required: false
+          schema:
+            type: string
+            format: uuid
+        - name: limit
+          in: query
+          required: false
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 500
+            default: 100
+      responses:
+        '200':
+          description: Validaciones.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/TicketValidationList'
+              examples:
+                rango:
+                  value:
+                    from: '2026-11-01'
+                    to: '2026-11-09'
+                    truncated: false
+                    items:
+                      - ticketId: 0192f3c1-2d3e-7f41-b263-748596a7b8c1
+                        eventId: 0192f3c1-2d3e-7f41-b263-748596a7b8c9
+                        eventTitle: Hackathon Bandada U
+                        attendeeId: 0192f1a2-3b4c-7d5e-8f60-718293a4b5c6
+                        validatedBy: 0192f1a2-4c5d-7e6f-9a01-8293a4b5c6d7
+                        validatedAt: '2026-11-08T22:45:00Z'
+        '400':
+          $ref: './shared/components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
 components:
   schemas:
+    TicketValidationList:
+      type: object
+      required: [from, to, truncated, items]
+      properties:
+        from:
+          type: string
+          format: date
+        to:
+          type: string
+          format: date
+        truncated:
+          type: boolean
+          description: '`true` si se alcanzó el tope de tickets analizados (lista parcial).'
+        items:
+          type: array
+          maxItems: 500
+          items:
+            $ref: '#/components/schemas/TicketValidation'
+    TicketValidation:
+      type: object
+      required: [ticketId, eventId, eventTitle, attendeeId, validatedBy, validatedAt]
+      properties:
+        ticketId:
+          type: string
+          format: uuid
+        eventId:
+          type: string
+          format: uuid
+        eventTitle:
+          type: string
+        attendeeId:
+          type: string
+          format: uuid
+          description: Dueño de la entrada.
+        validatedBy:
+          type: string
+          format: uuid
+          description: Quién escaneó la entrada (`usedBy`).
+        validatedAt:
+          type: string
+          format: date-time
     TicketStats:
       type: object
       required: [from, to, issued, used, voided, usageRate, truncated, byEvent]
