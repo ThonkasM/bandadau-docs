@@ -1249,3 +1249,15 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Seguridad:** SSH público y RDP de GCP cerrados (acceso por Tailscale). Pendiente del usuario: revocar la llave de Tailscale que se pegó en el chat.
 - **NO verificado:** instalación y arranque del APK en un dispositivo; comportamiento real de los scripts de Enterprise Architect; rendimiento bajo carga.
 - **Teardown tras la defensa:** `make aws-destroy` y `make aws-check`; `gcloud projects delete bandadau-demo-2026`; `az group delete -n bandada-rg`.
+
+### 2026-11-09 — Perfil ajeno, seguir, foto de perfil y feed por universidad (UC-04, UC-06, UC-08)
+
+**Agente:** Claude Code · **Repos:** `bandadau-frontend` (`4f64bf4`), `bandadau-backend` (`854648b`, `social-service`), `bandadau-docs`.
+
+- **Problema reportado en producción:** un post público de Jorge Carvajal no aparecía en el feed de Cesar Caballero; la app no tenía perfil de otro usuario ni forma de seguir, y no se podía subir foto de perfil.
+- **Causa:** el feed de fase 1 solo recomendaba posts públicos de la misma **carrera y universidad** (72 h); el backend ya exponía seguir/sugerencias/avatar, pero la app no los usaba.
+- **Frontend:** `app/user/[userId]` (perfil público con seguir/siguiendo y grilla), autor del `PostCard` navegable y con `avatarUrl`, tira «A quién seguir» (oculta si `getFollowSuggestions` viene vacío, es el comportamiento de fase 1), y foto de perfil desde el círculo del perfil propio (`expo-image-picker` con recorte cuadrado, redimensión 512 px, `purpose: AVATAR`, `PATCH /profiles/me`). Seguir/dejar de seguir refresca feed, contadores y sugerencias.
+- **Backend (decisión aprobada por el usuario):** el feed recomienda posts `PUBLIC` recientes de **toda la universidad** (sin universidad en el perfil, de la carrera). Índice `university_recent`. Imagen `bandada-social-service:v2` desplegada en AWS.
+- **Verificado (API, producción):** sin seguir, el post de Jorge llega al feed de Cesar con `source: RECOMMENDED`; seguir/dejar de seguir y `followedByMe` funcionan. Typecheck y tests del frontend (78) y de social-service (19) pasan.
+- **NO verificado:** la interfaz con sesión iniciada (no se escribieron credenciales en el navegador de producción) y la subida real de la foto; el APK no se recompiló, no incluye estos cambios.
+- **Abierto:** recompilar el APK; el sugeridor `follow-suggester` sigue sin modelo (lista vacía).
