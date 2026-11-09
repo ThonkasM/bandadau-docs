@@ -19,7 +19,7 @@ flowchart TB
     SHELL -->|fetch no-store| MAN
     SHELL -->|"script type=module + SRI"| CDN
     CDN --> WC1 & WC2
-    SHELL -->|"propiedades: accessToken, graphqlUrl<br/>atributos: base-path, theme, locale"| WC1 & WC2
+    SHELL -->|"propiedades: accessToken, graphqlUrl<br/>atributos: base-path, theme, locale, view (opcional)"| WC1 & WC2
     WC1 & WC2 -->|"CustomEvent bandada:*"| SHELL
     WC1 & WC2 -->|GraphQL| GW["admin-gateway"]
 ```
@@ -97,6 +97,7 @@ JSON Schema (`bandadau-docs/contracts/mfe/mfe-manifest.schema.json`):
 | `base-path` | string | atributo | `/moderation`; el MFE resuelve sus rutas relativas a esto |
 | `theme` | `light` \| `dark` | atributo | Tema **resuelto** (nunca `SYSTEM`; el shell resuelve, D13) |
 | `locale` | `es` \| `en` | atributo | D14 |
+| `view` | `summary` \| `detail` | atributo (opcional) | Vista gerencial o completa. Opcional: sin el atributo el MFE usa `detail`, así que los shells anteriores siguen funcionando. Hoy lo usa `insights`; el shell recuerda la elección del usuario |
 
 | Evento (MFE → shell) | `detail` | Acción del shell |
 |---|---|---|
