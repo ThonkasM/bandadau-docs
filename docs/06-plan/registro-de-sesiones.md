@@ -1300,3 +1300,14 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Insights:** la vista Resumen pone primero la pregunta (antes estaba colapsada al final) y muestra un aviso mientras se genera un reporte; la vista Detalle ya empezaba con la pregunta.
 - **Desplegado:** panel admin, microfrontend de insights 0.1.3 y la app web (con los cambios sin commitear del usuario: asistente, billetera, entradas). Typecheck, lint y 78 tests de la app pasan.
 - **NO verificado:** las gráficas Vega de reportes con datos reales y la vista Resumen de Insights en un navegador contra producción (solo hay prueba unitaria y el dashboard local con el mock).
+
+### 2026-11-09 (noche) — Reporte de asistencia (quién escaneó cada entrada) y pantalla de Reportes tradicional
+
+**Agente:** Claude Code · **Repos:** `bandadau-docs` (`81e0e18` contratos), `bandadau-backend` (`7449b7b` ticketing, `2545853` admin-gateway), `bandadau-admin` (`55f07ae` shell), `bandadau-infra` (IAM), `bandadau-docs`.
+
+- **Cómo se asigna el organizador (revisado):** el rol `ORGANIZER` lo da un ADMIN en el panel; al crear un evento, `organizerId` es el usuario autenticado; la SAGA copia `organizerId` (y `staffUserIds`, hoy siempre vacío) a la entrada, de modo que solo ese organizador o un ADMIN valida. Un ADMIN ya puede escanear cualquier QR (la app le muestra el botón); validar consume la entrada. El modo «solo verificar» (sin consumir) queda pendiente y requiere contrato.
+- **Qué se registraba:** el ticket guarda `usedBy` y `usedAt`, pero ninguna API los listaba. Contrato nuevo (contract-first): `GET /internal/v1/validations` (`listTicketValidations`, ticketing-service-stats 1.1.0) y consulta GraphQL `ticketValidations` (admin 1.6.0, solo ADMIN).
+- **Implementación:** `ticketing-service` (lector DynamoDB por Scan acotado, 4 pruebas unitarias); `admin-gateway` (cliente de ticketing, resolvers y nombres de organizador y asistente desde identity); panel: «Reportes» vuelve al menú con tres informes fijos (Asistencia con frases «X escaneó la entrada de Y», Inscripciones por evento y Créditos por día), rango de fechas y exportación CSV. Insights queda para preguntas libres con IA.
+- **Hallazgo en producción:** el rol IAM del EC2 no tenía `dynamodb:Scan` sobre `bandada-ticketing` (`ticketValidations` y la herramienta MCP `get_ticket_stats` fallaban con `AccessDeniedException`). Se agregó una sentencia aparte, solo `Scan` sobre esa tabla, con `terraform apply` (1 cambio, 0 creados, 0 destruidos).
+- **Verificado:** consulta `ticketValidations` en producción responde sin error (lista vacía: aún no se escaneó ninguna entrada); pruebas de `ticketing-service` (45) y del panel (12); Créditos e Inscripciones en el panel local con el mock.
+- **NO verificado:** el informe de Asistencia con datos reales (hay que escanear al menos una entrada); pruebas de integración del gateway (necesitan RabbitMQ y no corrieron).
