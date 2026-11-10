@@ -112,7 +112,7 @@ Sobre: **CloudEvents 1.0** (JSON). Catálogo completo de mensajes en
 | Tabla | PK / SK | TTL | Dueño |
 |---|---|---|---|
 | `bandada-idempotency` | `pk = <service>#<idempotencyKey>` | `expiresAt` (24 h) | compartida (cada servicio solo usa su prefijo) |
-| `bandada-ticketing` | `pk = TICKET#<ticketId>` / `sk = META`; GSI1 `USER#<userId>` / `EVENT#<eventId>`; GSI2 `REG#<registrationId>`; centinela `REG#<registrationId>` / `LOCK` | `expiresAt` en ítems técnicos | ticketing-service |
+| `bandada-ticketing` | `pk = TICKET#<ticketId>` / `sk = META`; GSI1 `USER#<userId>` / `STARTS#<eventStartsAt>#<id>` (evento ascendente); GSI2 `REG#<registrationId>` / `TICKET#<id>`; GSI3 `USER#<userId>` / `ISSUED#<issuedAt>#<id>` (adquisición descendente, ADR-0020); centinela `REG#<registrationId>` / `LOCK` | `expiresAt` en ítems técnicos | ticketing-service |
 | `bandada-notifications` | `pk = USER#<userId>` / `sk = NOTIF#<uuidv7>`; `DEVICE#<token>`; `PREF` | 90 días en notificaciones | notification-service |
 | `bandada-insights` | `pk = REPORT#<id>` · `AGENTRUN#<id>` · `METRIC#<name>` / `sk = <yyyy-mm-dd>` · `ALERT#<id>` | runs 30 días | insights-service |
 

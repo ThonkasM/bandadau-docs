@@ -30,6 +30,8 @@ Reglas:
 | [ADR-0017](ADR-0017-multi-repo-por-capa.md) | Repositorios por capa (estilo Homy) | Aceptada | 2026-10-14 | Arquitectura §6, convenciones §3 |
 | [ADR-0018](ADR-0018-decisiones-implementacion-fase-1.md) | Decisiones de implementación de la fase 1 | Aceptada | 2026-10-15 | ADR-0016, ADR-0017; catálogo §3 |
 | [ADR-0019](ADR-0019-rate-limit-distribuido-en-postgres.md) | Rate limit distribuido de identity en PostgreSQL (Redis diferido) | Aceptada | 2026-10-15 | D-16, ADR-0012 |
+| [ADR-0020](ADR-0020-gsi3-ticketing-orden-adquisicion.md) | Índice GSI3 de ticketing para ordenar entradas por fecha de adquisición | Aceptada | 2026-10-15 | Catálogo §6, UC-12 |
+| [ADR-0021](ADR-0021-cdn-multimedia-y-estructura-de-llaves.md) | CDN propio para multimedia (`media.<BASE_DOMAIN>`) y estructura de llaves de S3 | Propuesta | 2026-10-16 | Infraestructura (buckets/CloudFront), UC-05, RNF-08 |
 | [ADR-0024](ADR-0024-saga-multinube-aws-gcp-azure.md) | Despliegue multi-nube de los servicios de la SAGA (events en Azure, wallet en GCP, ticketing y datos en AWS) | Aceptada (diseño) | 2026-10-29 | ADR-0012 (parcial), C1, infraestructura §4.6 |
 | [ADR-0025](ADR-0025-despliegue-simplificado-tailscale.md) | Despliegue simplificado: red privada Tailscale entre AWS, Azure y GCP; datos en contenedores del EC2, DynamoDB real, nginx y Let's Encrypt | Aceptada (diseño; puntos 5 y 6 reemplazados por ADR-0026) | 2026-11-06 | ADR-0024 y ADR-0012 (parcial), C6, infraestructura §4.6 |
 | [ADR-0026](ADR-0026-cloudfront-route53-terraform.md) | Borde público con CloudFront (ACM), DNS de `bandadau.lat` en Route 53 e infraestructura de AWS con Terraform y borrado total con `destroy.sh` | Aceptada (diseño) | 2026-11-08 | ADR-0025 (parcial: TLS y DNS), infraestructura §4.6 |
