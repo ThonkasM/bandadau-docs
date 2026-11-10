@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Bandada U — notification-service
-  version: 1.2.0
+  version: 1.3.0
   summary: Notificaciones in-app, push y email; dispositivos y preferencias.
   description: |
     API del bounded context **Notificaciones** (`notification-service`, PHP 8.4 + Laravel 12,
@@ -25,8 +25,12 @@ info:
     - `ALERT` solo notifica si el evento trae `recipientUserIds`; `WELCOME` es solo in-app (el correo lo envía n8n).
     - Preferencias: los tipos ALERT y REGISTRATION_FAILED no se pueden silenciar: incluirlos en `mutedTypes` → `422` `TYPE_NOT_MUTABLE`.
     - `listNotifications` devuelve la cabecera `X-Unread-Count`.
+    - `ANNOUNCEMENT`: anuncio de texto libre de un administrador (`POST /internal/v1/notifications`). `params.title` (1..60) y `params.message` (1..240)
+      son obligatorios (`400 VALIDATION_FAILED` si faltan o exceden; se recortan espacios y se eliminan caracteres de control). Canales por defecto: IN_APP + PUSH
+      (sin email). **Sí se puede silenciar** (`mutedTypes`) y respeta los interruptores de canal del usuario. El push usa el título y cuerpo renderizados y `data.deepLink` si viene.
 
     ## Changelog
+    - 1.3.0 (2026-11-10): `NotificationType` agrega `ANNOUNCEMENT` (anuncios de texto libre desde el panel; `params.title` 1..60, `params.message` 1..240; silenciable).
     - 1.2.0 (2026-10-15): consolidación fase 1 — `X-Unread-Count` deja de ser propuesta; `mutedTypes` con `TYPE_NOT_MUTABLE` (422); `NOTIFICATION_NOT_FOUND` (404), `INVALID_DEVICE_TOKEN` (400);
       `deepLink` con base `APP_DEEP_LINK_BASE` (http en dev).
     - 1.1.0 (2026-10-14): ADR-0016/D15 — `sendNotification` deja de ser propuesta y acepta `dedupeKey`;
@@ -352,6 +356,16 @@ paths:
                   data:
                     deepLink: http://app.bandada.localhost/events/0192a3be-1234-7abc-8def-000000000042
                     eventId: 0192a3be-1234-7abc-8def-000000000042
+              anuncio:
+                summary: Anuncio de texto libre (ANNOUNCEMENT)
+                value:
+                  userIds: [0192a3b4-5c6d-7e8f-9a0b-1c2d3e4f5a6b]
+                  type: ANNOUNCEMENT
+                  params:
+                    title: Mantenimiento programado
+                    message: El sábado de 02:00 a 04:00 la plataforma estará en mantenimiento.
+                  data:
+                    deepLink: http://app.bandada.localhost/events
       responses:
         '202':
           description: Aceptada para entrega.
@@ -400,6 +414,7 @@ components:
         - REGISTRATION_CANCELLED
         - EVENT_CANCELLED
         - NEW_EVENT
+        - ANNOUNCEMENT
     DevicePlatform:
       type: string
       description: Plataforma del dispositivo (valores de `DeviceToken.platform`).
@@ -557,6 +572,7 @@ components:
         params:
           type: object
           description: Variables ICU de la plantilla del `type`.
+          Para `ANNOUNCEMENT`: `title` (string, 1..60) y `message` (string, 1..240) obligatorios.
           additionalProperties: true
         data:
           type: object
