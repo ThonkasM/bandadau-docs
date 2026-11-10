@@ -36,18 +36,26 @@ Estereotipos: **Actor**, **Boundary** (pantalla / endpoint / cola), **Control**
 5. Sustantivos del texto → boundaries/entities; verbos → controls.
 6. Si un paso del texto no aparece en el diagrama (o al revés), se corrige el **texto**.
 
-Notación en Mermaid (renderiza en GitHub/VS Code):
+**Notación normativa (ICONIX clásico, no UML).** El diagrama de robustez formal es un artefacto de
+análisis de ICONIX, no un diagrama UML: el tipo de cada elemento lo da su símbolo nativo, no una
+etiqueta `«boundary»` ni una flecha de flujo. Se dibuja con los símbolos clásicos:
 
-```mermaid
-flowchart LR
-    A(["👤 Estudiante"])
-    B1[/"«boundary» Pantalla Nuevo Post"/]
-    C1(("«control» Validar contenido"))
-    E1[("«entity» Post")]
-    A --> B1 --> C1 --> E1
-```
+| Elemento | Símbolo | Uso |
+|---|---|---|
+| Actor | figura de palo | Persona o sistema externo que interactúa con el caso |
+| Boundary | círculo con barra vertical a la izquierda | Pantalla, endpoint, cola, correo, broker |
+| Control | círculo con flecha curva en la parte superior | Lógica de un verbo del texto |
+| Entity | círculo con línea horizontal debajo | Objeto del dominio persistente o en memoria |
 
-Convención de formas: actor `([ ])`, boundary `[/ /]`, control `(( ))`, entity `[( )]`.
+Las asociaciones son **líneas simples** (comunicación), no flechas de flujo. El **curso alterno**
+se dibuja en **rojo** y el curso básico en negro. En la vista rápida de Mermaid —que no tiene esos
+símbolos— los estereotipos `«actor»`, `«boundary»`, `«control»` y `«entity»` son los marcadores que
+consume el generador de Enterprise Architect (`entregable/ea/`), que crea un **Actor** y objetos UML
+con estereotipos **EAUML::boundary**, **EAUML::control** y **EAUML::entity**; las formas de Mermaid
+son solo una aproximación.
+El piloto es [UC-14](03-casos-de-uso/UC-14-validar-entrada.md); su vista ilustrada (simplificada) está en
+[`UC-14-robustez.svg`](03-casos-de-uso/img/UC-14-robustez.svg). Los bloques Mermaid que aún quedan
+en otros UC son borradores heredados y se migrarán a este formato.
 
 ## 3. Plantilla obligatoria de un caso de uso
 
