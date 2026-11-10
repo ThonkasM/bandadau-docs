@@ -1,6 +1,6 @@
 # =============================================================================
 # Bandada U — GraphQL del panel de administración (admin-gateway)
-# Versión: 1.5.0 (2026-10-16) — schema-first según D11, D13, D14 y D15 (ADR-0016).
+# Versión: 1.7.0 (2026-11-10) — schema-first según D11, D13, D14 y D15 (ADR-0016).
 # Servido por admin-gateway (NestJS 11 + Apollo Server 5) en /graphql
 # (HTTP + WebSocket `graphql-ws` para suscripciones).
 #
@@ -30,6 +30,9 @@
 # `QUERY_TOO_DEEP`, `QUERY_TOO_COMPLEX`, `GRAPHQL_VALIDATION_FAILED`, `INTERNAL_SERVER_ERROR`.
 #
 # Changelog
+# - 1.7.0 (2026-11-10): panel de controles del sistema para demostrar el patrón SAGA (solo ADMIN): query `systemControls`, mutaciones
+#   `setValidationWindowEnforced` y `setSagaStepFailureSimulated`, tipos `SystemControls`/`SagaStepSimulation` y enum `SagaStepKey`.
+#   Origen: ticketing y wallet `GET|PUT /internal/v1/controls`.
 # - 1.6.0 (2026-11-09): query `ticketValidations(range, eventId, first)` (solo ADMIN) y tipos `TicketValidation`/`TicketValidationConnection`: entradas validadas en la
 #   puerta con quién la escaneó y de quién era (reporte de asistencia). Origen: `GET /internal/v1/validations` de ticketing; los nombres salen de identity.
 # - 1.5.0 (2026-10-16): motor del agente de reportes seleccionable (ADR-0022): enum `ReportEngine` (AUTO|OPENCODE|OLLAMA|STUB), argumento
@@ -1058,6 +1061,31 @@ type RevokeMcpTokenPayload {
 # Tipos raíz (D11)
 # -----------------------------------------------------------------------------
 
+"""Paso de la SAGA de inscripción cuyo fallo se puede simular para la demostración (compensación)."""
+enum SagaStepKey {
+  "Débito del monedero (wallet-service, `simulateDebitFailure`)."
+  WALLET_DEBIT
+  "Emisión del ticket (ticketing-service, `simulateIssueFailure`)."
+  TICKETING_ISSUE
+}
+
+"""Estado de la simulación de fallo de un paso de la SAGA (bandera en el servicio que ejecuta el paso)."""
+type SagaStepSimulation {
+  step: SagaStepKey!
+  "Servicio que ejecuta el paso (`wallet-service`, `ticketing-service`)."
+  service: String!
+  "`true` si el paso está configurado para fallar a propósito (dispara la compensación de la SAGA). Si el servicio no responde al leer, se informa `false`."
+  failureSimulated: Boolean!
+}
+
+"""Controles del sistema para la demostración de la SAGA. El estado vive en ticketing y wallet (el gateway no guarda nada)."""
+type SystemControls {
+  "`true` si ticketing exige que la validación en puerta caiga dentro de la ventana del evento."
+  validationWindowEnforced: Boolean!
+  "Simulación de fallo de cada paso de la SAGA."
+  sagaSteps: [SagaStepSimulation!]!
+}
+
 type Query {
   """Usuario autenticado en el panel."""
   me: User! @auth(requires: [MODERATOR, ADMIN])
@@ -1107,6 +1135,9 @@ type Query {
 
   """Entradas validadas en la puerta en un rango de fechas, con quién las escaneó (reporte de asistencia)."""
   ticketValidations(range: DateRangeInput!, eventId: UUID, first: Int = 100): TicketValidationConnection! @auth(requires: [ADMIN])
+
+  """Controles del sistema (ventana de validación de tickets y simulación de fallo de pasos de la SAGA)."""
+  systemControls: SystemControls! @auth(requires: [ADMIN])
 
   """SAGAs por estado (p. ej. FAILED o COMPENSATED)."""
   sagas(
@@ -1202,6 +1233,18 @@ type Mutation {
 
   """Revoca un token MCP antes de que expire (identity `revokeMcpToken`)."""
   revokeMcpToken(id: UUID!): RevokeMcpTokenPayload! @auth(requires: [ADMIN])
+
+  """
+  Activa o desactiva la exigencia de la ventana de validación de tickets (ticketing `PUT /internal/v1/controls/validation-window`).
+  Idempotente. Si ticketing no responde: error `SERVICE_UNAVAILABLE`.
+  """
+  setValidationWindowEnforced(enforced: Boolean!): SystemControls! @auth(requires: [ADMIN])
+
+  """
+  Activa o desactiva la simulación de fallo de un paso de la SAGA (wallet o ticketing `PUT /internal/v1/controls/simulate-failure`).
+  Idempotente. Si el servicio no responde: error `SERVICE_UNAVAILABLE`.
+  """
+  setSagaStepFailureSimulated(step: SagaStepKey!, enabled: Boolean!): SystemControls! @auth(requires: [ADMIN])
 }
 
 type Subscription {

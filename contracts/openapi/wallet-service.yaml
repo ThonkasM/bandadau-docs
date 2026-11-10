@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Bandada U — wallet-service
-  version: 1.4.0
+  version: 1.5.0
   summary: Billetera de créditos (saldo, movimientos, recargas y pasarela simulada).
   description: |
     API del bounded context **Billetera** (`wallet-service`, PHP 8.4 + Laravel 12,
@@ -29,6 +29,7 @@ info:
     - Las respuestas de la SAGA a `debit-credits`/`refund-credits` incluyen `idempotencyKey` (eco del comando).
 
     ## Changelog
+    - 1.5.0 (2026-11-10): nuevos `GET /internal/v1/controls` (`getSystemControls`) y `PUT /internal/v1/controls/simulate-failure` (`setSimulateDebitFailure`): control de runtime para simular que el paso «Debitar créditos» de la SAGA falle (motivo `SIMULATED_FAILURE` en `credits-debit-failed`). Ambos exigen el scope `internal:read` (misma autorización que el resto de los internos).
     - 1.4.0 (2026-10-16): nuevo `GET /internal/v1/stats/balances` (`getBalanceOverview`): créditos en circulación, billeteras con saldo, saldo promedio y mayores saldos para la herramienta MCP `get_wallet_overview`. Scope `internal:read`.
     - 1.3.0 (2026-10-16): nuevo `GET /internal/v1/stats/top-spenders` (`getTopSpenders`): ranking de usuarios por créditos gastados (débitos − reembolsos) en un rango, para la herramienta MCP `get_top_credit_spenders`. Scope `internal:read`.
     - 1.2.0 (2026-10-15): D-14 — `PAYMENT_GATEWAY_MODE`, `503` `PAYMENT_GATEWAY_UNAVAILABLE` en `createTopUp`/`simulateTopUpPayment`, `outcome: UNAVAILABLE`.
@@ -588,6 +589,83 @@ paths:
         '403':
           $ref: './shared/components.yaml#/components/responses/Forbidden'
 
+  /internal/v1/controls:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    get:
+      tags: [internal]
+      operationId: getSystemControls
+      summary: Controles de runtime (interno)
+      description: |
+        Estado de los controles de runtime persistidos en `system_controls` (lectura con caché de ~5 s en el proceso
+        consumidor de comandos). Hoy solo `simulateDebitFailure` (por defecto `false`). Exige el scope `internal:read`.
+      servers:
+        - url: http://wallet-service:7005
+          description: Red interna (Docker/VPC)
+      security:
+        - serviceAuth: []
+      responses:
+        '200':
+          description: Estado actual.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemControls'
+              example:
+                simulateDebitFailure: false
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
+
+  /internal/v1/controls/simulate-failure:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    put:
+      tags: [internal]
+      operationId: setSimulateDebitFailure
+      summary: Activar/desactivar el fallo simulado del débito (interno)
+      description: |
+        Con `enabled: true`, el consumidor de `bandada.wallet.cmd.debit-credits.v1` **no debita** y responde
+        `bandada.wallet.credits-debit-failed.v1` con `reason: SIMULATED_FAILURE` (el orquestador compensa la SAGA).
+        Un débito ya aplicado (misma `operationRef` `DEBIT:<registrationId>`) se sigue re-publicando como `credits-debited`:
+        nunca hay doble efecto ni se tocan saldos. Idempotente por naturaleza (PUT del mismo valor). El cambio se
+        propaga a los consumidores en ≤ ~5 s (caché). Exige el scope `internal:read` (misma autorización que los demás endpoints internos; el token de servicio es la barrera).
+      servers:
+        - url: http://wallet-service:7005
+          description: Red interna (Docker/VPC)
+      security:
+        - serviceAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [enabled]
+              additionalProperties: false
+              properties:
+                enabled: {type: boolean}
+            example:
+              enabled: true
+      responses:
+        '200':
+          description: Estado resultante.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemControls'
+              example:
+                simulateDebitFailure: true
+        '400':
+          $ref: './shared/components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
+
 components:
   parameters:
     TopUpId:
@@ -617,6 +695,13 @@ components:
         format: date
       example: '2026-10-13'
   schemas:
+    SystemControls:
+      type: object
+      required: [simulateDebitFailure]
+      properties:
+        simulateDebitFailure:
+          type: boolean
+          description: Si es `true`, el paso «Debitar créditos» de la SAGA falla a propósito (`SIMULATED_FAILURE`).
     LedgerEntryType:
       type: string
       enum: [TOPUP, DEBIT, REFUND]

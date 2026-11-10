@@ -1,7 +1,7 @@
 openapi: 3.1.0
 info:
   title: Bandada U — ticketing-service (estadísticas internas)
-  version: 1.1.0
+  version: 1.2.0
   summary: Lector interno de estadísticas y de validaciones de tickets para las herramientas MCP y el panel.
   description: |
     Complemento **interno** de `ticketing-service.yaml` (mismo servicio, `ticketing-service`, NestJS 11, Clean Architecture,
@@ -15,6 +15,7 @@ info:
     - Errores RFC 9457 con `code` estable (`INVALID_RANGE` en `400`).
 
     ## Changelog
+    - 1.2.0 (2026-11-10): controles de runtime: `GET /internal/v1/controls` (`getRuntimeControls`, `internal:read`) y `PUT /internal/v1/controls/validation-window` (`setValidationWindowControl`) y `PUT /internal/v1/controls/simulate-failure` (`setSimulateFailureControl`), ambos `internal:write`. Permiten, en caliente y para demos, desactivar la ventana de validación del QR (RN-14.3) y simular el fallo del paso de emisión de la SAGA (`ticket-issue-failed` con `reason: CHAOS_INJECTED`, sin crear ticket). Por defecto: ventana activa y sin fallo simulado.
     - 1.1.0 (2026-11-09): `GET /internal/v1/validations` (`listTicketValidations`): quién escaneó cada entrada y cuándo (`usedBy`/`usedAt`), para el reporte de asistencia del panel. Incluye identificadores de usuario (`attendeeId`, `validatedBy`): solo ADMIN a través del gateway, nunca MCP.
     - 1.0.0 (2026-10-16): `GET /internal/v1/stats/tickets` (`getTicketStats`) para la herramienta MCP `get_ticket_stats` y el criterio `ATTENDANCE` de `get_event_ranking`.
   contact:
@@ -164,8 +165,138 @@ paths:
           $ref: './shared/components.yaml#/components/responses/Unauthorized'
         '403':
           $ref: './shared/components.yaml#/components/responses/Forbidden'
+  /internal/v1/controls:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    get:
+      tags: [internal]
+      operationId: getRuntimeControls
+      summary: Controles de runtime (interno)
+      description: |
+        Devuelve el estado de los controles de runtime del servicio. `validationWindowEnforced` es `true` y
+        `simulateIssueFailure` es `false` por defecto (si el control nunca se modificó). Exige el scope `internal:read`.
+      security:
+        - serviceAuth: []
+      responses:
+        '200':
+          description: Controles vigentes.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeControls'
+              examples:
+                porDefecto:
+                  value:
+                    validationWindowEnforced: true
+                    simulateIssueFailure: false
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
+  /internal/v1/controls/simulate-failure:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    put:
+      tags: [internal]
+      operationId: setSimulateFailureControl
+      summary: Simula el fallo del paso de emisión de la SAGA (interno)
+      description: |
+        `enabled=true` hace que `issue-ticket` responda `ticket-issue-failed` (`reason: CHAOS_INJECTED`) sin crear ticket,
+        igual que `CHAOS_TICKETING_FAIL` (el servicio aplica `variable de entorno OR control`). `enabled=false` restablece la
+        emisión normal. No se desconecta nada: es una simulación del fallo del paso. Se persiste en el item
+        `CONTROL#simulate-failure` (con `updatedAt`/`updatedBy`) y se lee con caché corta (≈5 s). Exige `internal:write`.
+      security:
+        - serviceAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/SimulateFailureControlInput'
+            examples:
+              activar:
+                value:
+                  enabled: true
+      responses:
+        '200':
+          description: Controles tras el cambio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeControls'
+        '400':
+          $ref: './shared/components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
+  /internal/v1/controls/validation-window:
+    parameters:
+      - $ref: './shared/components.yaml#/components/parameters/AcceptLanguage'
+      - $ref: './shared/components.yaml#/components/parameters/CorrelationId'
+    put:
+      tags: [internal]
+      operationId: setValidationWindowControl
+      summary: Activa o desactiva la ventana de validación del QR (interno)
+      description: |
+        `enforced=false` hace que `POST /api/v1/tickets/validate` NO aplique la ventana `startsAt - 2h … fin del evento`
+        (el resto de validaciones —firma JWS, ticket usado/anulado, evento, organizador dueño— no cambia). `enforced=true`
+        la restablece. Se persiste en la tabla del servicio (item `CONTROL#validation-window`, con `updatedAt`/`updatedBy`)
+        y el servicio lo lee con una caché corta (≈5 s), así que el cambio surte efecto en segundos. Idempotente por
+        naturaleza (PUT del valor deseado). Exige el scope `internal:write`.
+      security:
+        - serviceAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/ValidationWindowControlInput'
+            examples:
+              desactivar:
+                value:
+                  enforced: false
+      responses:
+        '200':
+          description: Controles tras el cambio.
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RuntimeControls'
+        '400':
+          $ref: './shared/components.yaml#/components/responses/BadRequest'
+        '401':
+          $ref: './shared/components.yaml#/components/responses/Unauthorized'
+        '403':
+          $ref: './shared/components.yaml#/components/responses/Forbidden'
 components:
   schemas:
+    RuntimeControls:
+      type: object
+      required: [validationWindowEnforced, simulateIssueFailure]
+      properties:
+        validationWindowEnforced:
+          type: boolean
+          description: '`true` = se aplica la ventana de validación (valor por defecto).'
+        simulateIssueFailure:
+          type: boolean
+          description: '`true` = la emisión de tickets falla de forma simulada (por defecto `false`).'
+    SimulateFailureControlInput:
+      type: object
+      required: [enabled]
+      additionalProperties: false
+      properties:
+        enabled:
+          type: boolean
+    ValidationWindowControlInput:
+      type: object
+      required: [enforced]
+      additionalProperties: false
+      properties:
+        enforced:
+          type: boolean
     TicketValidationList:
       type: object
       required: [from, to, truncated, items]

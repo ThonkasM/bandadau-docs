@@ -3002,10 +3002,12 @@ components:
           type: string
           description: |-
             `SAGA_ABORTED` (ADR-0016): el `debit-credits` llegó tarde y ya existe el *tombstone* `REFUND:<registrationId>` (la SAGA ya se compensó); no se debita.
+            `SIMULATED_FAILURE`: fallo inyectado a propósito con el control interno `simulate_debit_failure` de `wallet-service` (demostración de la compensación); no se debita ni se toca el saldo. `events-service` lo trata como cualquier motivo desconocido (`SAGA_ABORTED`) y compensa.
           enum:
           - INSUFFICIENT_FUNDS
           - WALLET_NOT_FOUND
           - SAGA_ABORTED
+          - SIMULATED_FAILURE
         requiredCredits:
           type: integer
           format: int64
@@ -4753,7 +4755,7 @@ components:
       title: Débito fallido (respuesta SAGA)
       summary: bandada.wallet.credits-debit-failed.v1
       description: |-
-        Respuesta de fallo al comando `debit-credits`: `INSUFFICIENT_FUNDS`, `WALLET_NOT_FOUND` o `SAGA_ABORTED` (débito tardío tras el reembolso; el orquestador lo ignora porque la SAGA ya terminó).
+        Respuesta de fallo al comando `debit-credits`: `INSUFFICIENT_FUNDS`, `WALLET_NOT_FOUND`, `SIMULATED_FAILURE` (fallo simulado desde el panel de administración) o `SAGA_ABORTED` (débito tardío tras el reembolso; el orquestador lo ignora porque la SAGA ya terminó).
 
         **Exchange:** `bandada.events` · **Publica:** `wallet-service`
       contentType: application/cloudevents+json
