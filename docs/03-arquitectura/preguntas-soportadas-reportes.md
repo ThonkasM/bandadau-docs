@@ -2,7 +2,7 @@
 
 Catálogo de lo que un administrador puede preguntar en `mfe-insights` y **qué herramienta MCP la responde**.
 Complementa a [agentes-y-reportes-generativos.md](agentes-y-reportes-generativos.md) (§5.6 modo respuesta, §5.7 verificador) y a
-[`contracts/mcp/tools.md`](../../contracts/mcp/tools.md) (contrato de las 20 herramientas). El panel ofrece estas preguntas como
+[`contracts/mcp/tools.md`](../../contracts/mcp/tools.md) (contrato de las 21 herramientas). El panel ofrece estas preguntas como
 ejemplos por tema (pestañas Usuarios, Créditos, Eventos, Tickets, Contenido, Sistema; `mfe-insights/src/features/reports/question-catalog.ts`).
 
 ## 1. Cómo se responde una pregunta
@@ -68,6 +68,7 @@ Límites: `topBalances` trae los 5 saldos más altos (máx. 20). No hay «recarg
 | Pregunta (es) | Question (en) | Herramienta |
 |---|---|---|
 | ¿Quién compró el último ticket? | Who bought the last ticket? | `list_recent_registrations` |
+| ¿Cuál fue el último ticket escaneado? / ¿Quién escaneó…? / Asistencia reciente | What was the last ticket scanned? / Who scanned…? | `list_recent_scans` (escaneo ≠ compra: «último ticket comprado» sigue yendo a `list_recent_registrations`) |
 | ¿Cuántos tickets se han emitido? | How many tickets have been issued? | `get_ticket_stats` |
 | ¿Cuántos tickets fueron usados? | How many tickets were used? | `get_ticket_stats` |
 | ¿Cuál es la tasa de asistencia / de uso? | What is the ticket usage rate? | `get_ticket_stats` + `calculate` (`PERCENT`) |

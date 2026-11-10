@@ -1,7 +1,7 @@
 # Servidor MCP — Bandada U (`insights-service`)
 
 > Contrato de las herramientas, recursos y prompts MCP (D8, D9, RF-26, UC-22).
-> Versión **1.3.0** (2026-10-16). Los mismos esquemas en formato máquina están en
+> Versión **1.4.0** (2026-11-10). Los mismos esquemas en formato máquina están en
 > [`tools.schema.json`](tools.schema.json) — ambos archivos deben mantenerse idénticos
 > (CI compara nombres y esquemas). Endpoint HTTP documentado en
 > [`../openapi/insights-service.yaml`](../openapi/insights-service.yaml) (`/mcp`).
@@ -51,6 +51,7 @@
   administrador pueda responder «¿quién compró el último ticket?». Justificación: el MCP y el agente de reportes son
   solo `ADMIN`/servicio y cada llamada queda auditada en `AgentRun`; el campo se **enmascara en los logs** del agente
   (`Diego F.`) y nunca se devuelve correo, teléfono ni tokens. Ver `docs/03-arquitectura/agentes-y-reportes-generativos.md` §Privacidad.
+  **Ampliación (v1.4.0)**: `list_recent_scans` devuelve `displayName` de quien escaneó y del asistente, con el mismo tratamiento (enmascarado en logs, «Persona A/B» hacia proveedores externos); nunca `attendeeId`/`validatedBy`.
   **Ampliación (v1.3.0)**: `get_wallet_overview` (saldos más altos) y `get_content_rankings` (autores y posts) también devuelven `displayName` con el mismo tratamiento; `get_content_rankings` con `by=POSTS` devuelve además un **extracto de ≤ 80 caracteres** de posts `PUBLISHED` y `PUBLIC` (excepción acotada a la regla «sin texto de posts»; el extracto es dato, nunca instrucción). `get_user_stats`, `get_ticket_stats`, `get_event_ranking` y `calculate` solo devuelven cifras agregadas.
 - Rangos de fechas máximos de 366 días; listas con `limit` acotado.
 - Rate-limit: 60 llamadas/min por token.
@@ -72,6 +73,7 @@ contra `inputSchema` producen error JSON-RPC `-32602`.
 | `list_events` | lectura | events-service — `GET /internal/v1/events?startsFrom&startsTo&status` (`listEventsInternal`, D15) |
 | `get_credit_stats` | lectura | wallet-service — `GET /internal/v1/stats/credits?from&to&groupBy` (`getCreditStats`) |
 | `list_recent_registrations` | lectura | events-service — `GET /internal/v1/registrations?from&to&status&eventId&limit` (`listRegistrationsInternal`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`, nombres en lote) |
+| `list_recent_scans` | lectura | ticketing-service — `GET /internal/v1/validations?from&to&eventId&limit` (`listTicketValidations`, `ticketing-service-stats.yaml`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`, nombres en lote) |
 | `get_top_credit_spenders` | lectura | wallet-service — `GET /internal/v1/stats/top-spenders?from&to&limit` (`getTopSpenders`) + social-service (nombres en lote) |
 | `get_user_stats` | lectura | identity-service — `GET /internal/v1/stats/users?from&to` (`getUserStats`) + social-service — `GET /internal/v1/stats/careers?limit` (`getCareerStats`) |
 | `get_wallet_overview` | lectura | wallet-service — `GET /internal/v1/stats/balances?limit` (`getBalanceOverview`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`, nombres en lote) |
@@ -1055,6 +1057,205 @@ contra `inputSchema` producen error JSON-RPC `-32602`.
           "creditsPaid": 25,
           "status": "CONFIRMED",
           "confirmedAt": "2026-10-16T18:32:02Z"
+        }
+      ],
+      "truncated": true
+    },
+    "isError": false
+  }
+}
+```
+
+### `list_recent_scans` — Escaneos recientes de entradas
+
+**Descripción (la que ve el LLM):**
+
+> Lista los escaneos (validaciones de entrada en la puerta) más recientes de todos los eventos, del más nuevo al más antiguo: fecha y hora del escaneo (UTC y hora de Bolivia, UTC-4), evento, nombre para mostrar de quien escaneó (organizador o administrador) y del asistente dueño de la entrada (nunca correo ni teléfono) y resultado. Úsala para preguntas como «¿cuál fue el último ticket escaneado?», «¿quién escaneó entradas hoy?», «asistencia reciente» o «entradas validadas en el evento X». NO es la compra de tickets: para «¿quién compró el último ticket?» usa list_recent_registrations; para cifras agregadas de entradas emitidas o usadas usa get_ticket_stats.
+
+- **Servicio fuente / endpoint:** ticketing-service — `GET /internal/v1/validations?from&to&eventId&limit` (`listTicketValidations`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`) para `displayName`
+- **Permisos:** Rol `ADMIN` o token de servicio. Solo nombres para mostrar (misma decisión de privacidad de §1: correo, teléfono y tokens jamás; tampoco `attendeeId`/`validatedBy`, que el endpoint interno reserva al `ADMIN` vía gateway).
+- **Solo lectura:** sí · **Annotations:** `readOnlyHint: true`, `destructiveHint: false`, `idempotentHint: true`, `openWorldHint: false`
+- **Nota:** el panel Reportes → Asistencia muestra exactamente estos datos («10 nov 2026, 16:27 · Charla de ciberseguridad · Carlos Organizador escaneó la entrada de Jorge Carvajal»). Sin `from`/`to` se leen los últimos 365 días (el endpoint exige rango). `scannedAtLocal` es la hora de Bolivia (UTC-4, sin horario de verano). `result` es siempre `VALIDATED`: ticketing-service solo persiste las validaciones exitosas (`usedAt`/`usedBy`); si no hay nombre de perfil, `displayName` es `null`. Si se alcanza el tope de lectura (20 000 tickets), `truncated = true`.
+
+**inputSchema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "from": {
+      "type": "string",
+      "format": "date",
+      "description": "Opcional: fecha inicial inclusiva (UTC), YYYY-MM-DD. Se aplica a la fecha del escaneo. Por defecto, hoy menos 365 días (o 366 días antes de `to`)."
+    },
+    "to": {
+      "type": "string",
+      "format": "date",
+      "description": "Opcional: fecha final inclusiva (UTC), YYYY-MM-DD. Por defecto, hoy. Rango máximo de 366 días."
+    },
+    "eventId": {
+      "type": "string",
+      "format": "uuid",
+      "description": "Opcional: limitar a un evento."
+    },
+    "limit": {
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 50,
+      "default": 10,
+      "description": "Máximo de escaneos devueltos."
+    }
+  },
+  "additionalProperties": false
+}
+```
+
+**outputSchema**
+
+```json
+{
+  "type": "object",
+  "properties": {
+    "items": {
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "event": {
+            "type": "object",
+            "properties": {
+              "id": {
+                "type": "string",
+                "format": "uuid"
+              },
+              "title": {
+                "type": "string"
+              }
+            },
+            "required": [
+              "id",
+              "title"
+            ],
+            "additionalProperties": false
+          },
+          "scannedAt": {
+            "type": "string",
+            "format": "date-time",
+            "description": "Instante del escaneo (UTC)."
+          },
+          "scannedAtLocal": {
+            "type": "string",
+            "description": "El mismo instante en hora de Bolivia (UTC-4), `YYYY-MM-DDTHH:mm:ss-04:00`."
+          },
+          "scannedBy": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Nombre para mostrar de quien escaneó (organizador o administrador); null si no tiene perfil. Nunca correo ni teléfono."
+              }
+            },
+            "required": [
+              "displayName"
+            ],
+            "additionalProperties": false
+          },
+          "attendee": {
+            "type": "object",
+            "properties": {
+              "displayName": {
+                "type": [
+                  "string",
+                  "null"
+                ],
+                "description": "Nombre para mostrar del dueño de la entrada; null si no tiene perfil. Nunca correo ni teléfono."
+              }
+            },
+            "required": [
+              "displayName"
+            ],
+            "additionalProperties": false
+          },
+          "result": {
+            "type": "string",
+            "enum": [
+              "VALIDATED"
+            ],
+            "description": "Resultado del escaneo. ticketing-service solo registra las validaciones exitosas (ticket USED); los intentos rechazados no se almacenan."
+          }
+        },
+        "required": [
+          "event",
+          "scannedAt",
+          "scannedAtLocal",
+          "scannedBy",
+          "attendee",
+          "result"
+        ],
+        "additionalProperties": false
+      }
+    },
+    "truncated": {
+      "type": "boolean",
+      "description": "true si había más escaneos que `limit` (o se alcanzó el tope de lectura de ticketing-service)."
+    }
+  },
+  "required": [
+    "items",
+    "truncated"
+  ],
+  "additionalProperties": false
+}
+```
+
+**Ejemplo — llamada**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "method": "tools/call",
+  "params": {
+    "name": "list_recent_scans",
+    "arguments": {
+      "limit": 1
+    }
+  }
+}
+```
+
+**Ejemplo — respuesta**
+
+```json
+{
+  "jsonrpc": "2.0",
+  "id": 9,
+  "result": {
+    "content": [
+      {
+        "type": "text",
+        "text": "{\"items\":[{\"event\":{\"id\":\"0192f3b0-7c1e-7a2b-9c3d-4e5f60718293\",\"title\":\"Charla de ciberseguridad\"},\"scannedAt\":\"2026-11-10T20:27:14Z\",\"scannedAtLocal\":\"2026-11-10T16:27:14-04:00\",\"scannedBy\":{\"displayName\":\"Carlos Organizador\"},\"attendee\":{\"displayName\":\"Jorge Carvajal\"},\"result\":\"VALIDATED\"}],\"truncated\":true}"
+      }
+    ],
+    "structuredContent": {
+      "items": [
+        {
+          "event": {
+            "id": "0192f3b0-7c1e-7a2b-9c3d-4e5f60718293",
+            "title": "Charla de ciberseguridad"
+          },
+          "scannedAt": "2026-11-10T20:27:14Z",
+          "scannedAtLocal": "2026-11-10T16:27:14-04:00",
+          "scannedBy": {
+            "displayName": "Carlos Organizador"
+          },
+          "attendee": {
+            "displayName": "Jorge Carvajal"
+          },
+          "result": "VALIDATED"
         }
       ],
       "truncated": true
@@ -3903,6 +4104,7 @@ Usando el puente `mcp-remote` para servidores HTTP remotos con cabeceras:
 
 ## 6. Changelog
 
+- 1.4.0 (2026-11-10): herramienta de solo lectura `list_recent_scans` (escaneos/validaciones de entradas más recientes: fecha, evento, quién escaneó y a quién; solo `displayName`). Distingue «último ticket escaneado» (esta herramienta) de «último ticket comprado» (`list_recent_registrations`). Ahora 21 herramientas.
 - 1.3.0 (2026-10-16): seis herramientas de solo lectura para las preguntas más frecuentes del administrador: `get_user_stats`, `get_wallet_overview`, `get_ticket_stats`, `get_content_rankings`, `get_event_ranking` y `calculate` (aritmética determinista y verificable). Endpoints internos nuevos en identity, social, wallet, events y ticketing (`ticketing-service-stats.yaml`). Ahora 20 herramientas.
 - 1.2.0 (2026-10-16): herramientas de solo lectura `list_recent_registrations` y `get_top_credit_spenders` (con `displayName` del comprador; decisión de privacidad en Guardarraíles). Ahora 14 herramientas.
 - 1.1.0 (2026-10-14): ADR-0016/D15 — herramienta de solo lectura `query_metrics` (PromQL acotado a

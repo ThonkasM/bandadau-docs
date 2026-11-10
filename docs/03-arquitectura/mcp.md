@@ -108,6 +108,7 @@ con contenido de texto JSON y, si el SDK lo soporta, `structuredContent` según 
 | `list_events` | `from`, `to`, `status?`, `limit ≤ 50` | events | `GET /internal/v1/events?startsFrom&startsTo&status` (**pendiente en D1**, ver PROPUESTAS; los tokens `typ=service` no se aceptan en `/api/v1`) | no |
 | `get_credit_stats` | `from`, `to` | wallet | `GET /internal/v1/stats/credits?from&to` (`getCreditStats`) | no |
 | `list_recent_registrations` | `from?`, `to?`, `status?` (CONFIRMED), `eventId?`, `limit ≤ 50` (10) | events + social | `GET /internal/v1/registrations` (`listRegistrationsInternal`) + `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`, nombres en lote) | no |
+| `list_recent_scans` | `from?`, `to?`, `eventId?`, `limit ≤ 50` (10) | ticketing + social | `GET /internal/v1/validations` (`listTicketValidations`) + `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`, nombres en lote); solo `displayName`, nunca `attendeeId`/`validatedBy` | no |
 | `get_top_credit_spenders` | `from`, `to`, `limit ≤ 20` | wallet + social | `GET /internal/v1/stats/top-spenders` (`getTopSpenders`) + `getProfileNamesInternal` | no |
 | `get_user_stats` | `from?`, `to?` | identity + social | `GET /internal/v1/stats/users` (`getUserStats`) + `GET /internal/v1/stats/careers` (`getCareerStats`) | no |
 | `get_wallet_overview` | `limit ≤ 20` (5) | wallet + social | `GET /internal/v1/stats/balances` (`getBalanceOverview`) + `getProfileNamesInternal` | no |

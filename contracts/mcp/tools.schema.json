@@ -2,8 +2,8 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://bandadau.com/contracts/mcp/tools.schema.json",
   "title": "Bandada U — herramientas MCP (insights-service)",
-  "description": "Definiciones de herramientas MCP (name, title, description, inputSchema, outputSchema, annotations) para generar código. Fuente de verdad junto con tools.md. Versión 1.3.0.",
-  "version": "1.3.0",
+  "description": "Definiciones de herramientas MCP (name, title, description, inputSchema, outputSchema, annotations) para generar código. Fuente de verdad junto con tools.md. Versión 1.4.0.",
+  "version": "1.4.0",
   "server": {
     "name": "bandada-insights",
     "transport": "streamable-http",
@@ -679,6 +679,145 @@
       },
       "x-source": "events-service — `GET /internal/v1/registrations?from&to&status&eventId&limit` (`listRegistrationsInternal`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`) para `displayName`",
       "x-permissions": "Rol `ADMIN` o token de servicio.",
+      "x-internal-only": false
+    },
+    {
+      "name": "list_recent_scans",
+      "title": "Escaneos recientes de entradas",
+      "description": "Lista los escaneos (validaciones de entrada en la puerta) más recientes de todos los eventos, del más nuevo al más antiguo: fecha y hora del escaneo (UTC y hora de Bolivia, UTC-4), evento, nombre para mostrar de quien escaneó (organizador o administrador) y del asistente dueño de la entrada (nunca correo ni teléfono) y resultado. Úsala para preguntas como «¿cuál fue el último ticket escaneado?», «¿quién escaneó entradas hoy?», «asistencia reciente» o «entradas validadas en el evento X». NO es la compra de tickets: para «¿quién compró el último ticket?» usa list_recent_registrations; para cifras agregadas de entradas emitidas o usadas usa get_ticket_stats.",
+      "inputSchema": {
+        "type": "object",
+        "properties": {
+          "from": {
+            "type": "string",
+            "format": "date",
+            "description": "Opcional: fecha inicial inclusiva (UTC), YYYY-MM-DD. Se aplica a la fecha del escaneo. Por defecto, hoy menos 365 días (o 366 días antes de `to`)."
+          },
+          "to": {
+            "type": "string",
+            "format": "date",
+            "description": "Opcional: fecha final inclusiva (UTC), YYYY-MM-DD. Por defecto, hoy. Rango máximo de 366 días."
+          },
+          "eventId": {
+            "type": "string",
+            "format": "uuid",
+            "description": "Opcional: limitar a un evento."
+          },
+          "limit": {
+            "type": "integer",
+            "minimum": 1,
+            "maximum": 50,
+            "default": 10,
+            "description": "Máximo de escaneos devueltos."
+          }
+        },
+        "additionalProperties": false
+      },
+      "outputSchema": {
+        "type": "object",
+        "properties": {
+          "items": {
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "event": {
+                  "type": "object",
+                  "properties": {
+                    "id": {
+                      "type": "string",
+                      "format": "uuid"
+                    },
+                    "title": {
+                      "type": "string"
+                    }
+                  },
+                  "required": [
+                    "id",
+                    "title"
+                  ],
+                  "additionalProperties": false
+                },
+                "scannedAt": {
+                  "type": "string",
+                  "format": "date-time",
+                  "description": "Instante del escaneo (UTC)."
+                },
+                "scannedAtLocal": {
+                  "type": "string",
+                  "description": "El mismo instante en hora de Bolivia (UTC-4), `YYYY-MM-DDTHH:mm:ss-04:00`."
+                },
+                "scannedBy": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Nombre para mostrar de quien escaneó (organizador o administrador); null si no tiene perfil. Nunca correo ni teléfono."
+                    }
+                  },
+                  "required": [
+                    "displayName"
+                  ],
+                  "additionalProperties": false
+                },
+                "attendee": {
+                  "type": "object",
+                  "properties": {
+                    "displayName": {
+                      "type": [
+                        "string",
+                        "null"
+                      ],
+                      "description": "Nombre para mostrar del dueño de la entrada; null si no tiene perfil. Nunca correo ni teléfono."
+                    }
+                  },
+                  "required": [
+                    "displayName"
+                  ],
+                  "additionalProperties": false
+                },
+                "result": {
+                  "type": "string",
+                  "enum": [
+                    "VALIDATED"
+                  ],
+                  "description": "Resultado del escaneo. ticketing-service solo registra las validaciones exitosas (ticket USED); los intentos rechazados no se almacenan."
+                }
+              },
+              "required": [
+                "event",
+                "scannedAt",
+                "scannedAtLocal",
+                "scannedBy",
+                "attendee",
+                "result"
+              ],
+              "additionalProperties": false
+            }
+          },
+          "truncated": {
+            "type": "boolean",
+            "description": "true si había más escaneos que `limit` (o se alcanzó el tope de lectura de ticketing-service)."
+          }
+        },
+        "required": [
+          "items",
+          "truncated"
+        ],
+        "additionalProperties": false
+      },
+      "annotations": {
+        "title": "Escaneos recientes de entradas",
+        "readOnlyHint": true,
+        "destructiveHint": false,
+        "idempotentHint": true,
+        "openWorldHint": false
+      },
+      "x-source": "ticketing-service — `GET /internal/v1/validations?from&to&eventId&limit` (`listTicketValidations`) + social-service — `GET /internal/v1/profiles?ids` (`getProfileNamesInternal`) para los nombres de `scannedBy` y `attendee`",
+      "x-permissions": "Rol `ADMIN` o token de servicio. Solo nombres para mostrar (decisión de privacidad de §1); los identificadores de usuario (`attendeeId`, `validatedBy`) del endpoint interno nunca salen por MCP.",
       "x-internal-only": false
     },
     {
