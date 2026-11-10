@@ -1320,3 +1320,10 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Generador EA:** `generar-scripts-ea.mjs` ahora produce `08-modelo-de-datos.js`; se corrigió `parseMember` (atributos `nombre: Tipo`) y `runtime.js` distribuye las clases en cuadrícula según su tamaño. Total: 156 diagramas en 8 scripts.
 - **Vista previa:** `entregable/ea/previsualizacion/` (PNG y Word) con aproximación Mermaid del estilo EA.
 - **NO verificado:** el script 08 no se ejecutó en un EA real (solo la API simulada de `probar-scripts.mjs`); el aspecto en EA puede variar.
+
+### 2026-11-09 (noche) — Diagrama de paquetes «Diseño lógico organizado en capas» para EA
+
+**Agente:** Claude Code · **Repo:** `bandadau-docs`.
+
+- Nuevo `docs/03-arquitectura/arquitectura-en-capas.md` (fuente Mermaid) y script `09-arquitectura-en-capas.js`: diagrama de paquetes UML 2.5 con clientes, API Gateway, admin-gateway, las cuatro capas internas de un servicio y los almacenes (RabbitMQ, PostgreSQL, MongoDB, DynamoDB, S3). El generador ganó `packageDiagram` (filas por camino más largo) y el tipo `Package` en `runtime.js`. Total: 157 diagramas en 9 scripts.
+- **NO verificado:** el script 09 no se ejecutó en un EA real (solo la API simulada); la vista previa `previsualizacion/img/11-capas.png` es una aproximación del estilo EA.

@@ -1602,5 +1602,15 @@
   ],
   "type": "class",
   "code": "classDiagram\n    direction LR\n    class idempotency_record {\n        <<item>>\n        +pk: string PK\n        +status: string\n        +requestHash: string\n        +principal: string\n        +lockExpiresAt: int\n        +responseStatus: int?\n        +responseHeaders: object?\n        +responseBody: string?\n        +responseTooLarge: bool?\n        +expiresAt: int\n    }"
+ },
+ {
+  "script": "09-arquitectura-en-capas.js",
+  "scriptTitle": "Bandada U - 09 Arquitectura en capas",
+  "title": "Diseno logico organizado en capas",
+  "path": [
+   "Arquitectura"
+  ],
+  "type": "package",
+  "code": "flowchart TB\n    APP[\"Paquete App móvil y web\"]\n    ADM[\"Paquete Panel admin\"]\n    LAND[\"Paquete Landing\"]\n    GW[\"API Gateway (Traefik)\"]\n    BFF[\"admin-gateway (BFF)\"]\n    CTRL[\"Capa de interfaces\"]\n    APPL[\"Capa de aplicación\"]\n    DOM[\"Capa de dominio\"]\n    INFRA[\"Capa de infraestructura\"]\n    MQ[\"RabbitMQ\"]\n    PG[\"PostgreSQL\"]\n    MG[\"MongoDB\"]\n    DY[\"DynamoDB\"]\n    S3[\"S3 / MinIO\"]\n\n    APP --> GW\n    ADM --> GW\n    LAND --> GW\n    GW --> BFF\n    GW --> CTRL\n    BFF --> CTRL\n    CTRL --> APPL\n    APPL --> DOM\n    APPL --> INFRA\n    INFRA --> MQ\n    INFRA --> PG\n    INFRA --> MG\n    INFRA --> DY\n    INFRA --> S3"
  }
 ]

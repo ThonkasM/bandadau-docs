@@ -9,7 +9,7 @@ Cómo usarla: ejecuta el script de EA, abre el diagrama con el **nombre exacto**
 expórtalo como imagen (clic derecho > *Save as Image* o `Ctrl+Shift+...` según versión) y sustituye o agrega la
 figura en la sección indicada. Los nombres de paquete son los que crea el script en el *Project Browser*.
 
-**Resumen:** 156 diagramas en EA; **64** aparecen en el documento (con figura y sección) y **92** no
+**Resumen:** 157 diagramas en EA; **64** aparecen en el documento (con figura y sección) y **93** no
 están en el Word (columna «Sugerencia»). La numeración de figuras puede moverse si se agregan o quitan
 figuras: vuelve a generar este archivo después de reconstruir el documento.
 
@@ -224,6 +224,14 @@ Script: `scripts/08-modelo-de-datos.js` · paquete EA: «Bandada U - 08 Modelo d
 | Clases - Notificaciones — bandada-notifications (DynamoDB) | DynamoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
 | Clases - Insights — bandada-insights (DynamoDB) | DynamoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
 | Clases - Idempotencia compartida — bandada-idempotency (DynamoDB) | DynamoDB | — (no está en el Word) | 4.5. Integración de componentes |
+
+## 09-arquitectura-en-capas.js
+
+Script: `scripts/09-arquitectura-en-capas.js` · paquete EA: «Bandada U - 09 Arquitectura en capas» · 0 de 1 diagramas están en el documento.
+
+| Diagrama en EA | Paquete | Figura | Sección del documento / Sugerencia |
+|---|---|---|---|
+| Diseno logico organizado en capas | Arquitectura | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
 
 ## No importado a EA
 

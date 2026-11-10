@@ -23,7 +23,8 @@ var EA_TYPE_BY_KIND = {
   state: "State",
   initial: "StateNode",
   final: "StateNode",
-  note: "Note"
+  note: "Note",
+  "package": "Package"
 };
 
 var DIAGRAM_TYPE = {
@@ -32,7 +33,8 @@ var DIAGRAM_TYPE = {
   state: "Statechart",
   "class": "Class",
   robust: "Analysis",
-  seq: "Sequence"
+  seq: "Sequence",
+  "package": "Package"
 };
 
 var stats = { packages: 0, elements: 0, connectors: 0, diagrams: 0, warnings: 0 };

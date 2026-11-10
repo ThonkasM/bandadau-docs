@@ -545,6 +545,30 @@ function archDiagram(code, where, title, path, mode) {
 }
 
 
+
+// ------------------------------------------------------------------ paquetes en capas
+// Diagrama de paquetes: cada nodo del flowchart es un paquete; las filas salen del camino mas largo desde las fuentes.
+function packageDiagram(code, where, title, path) {
+  const g = parseFlowchart(code, where);
+  const rank = new Map(g.nodes.map((n) => [n.id, 0]));
+  for (let i = 0; i < g.nodes.length; i++)
+    for (const e of g.edges) rank.set(e.to, Math.max(rank.get(e.to), rank.get(e.from) + 1));
+  const rows = [];
+  for (const n of g.nodes) (rows[rank.get(n.id)] ||= []).push(n);
+  const W = 250, H = 110, GX = 90, GY = 90;
+  const maxW = Math.max(...rows.map((r) => r.length)) * (W + GX) - GX;
+  const nodes = [];
+  rows.forEach((r, ri) => {
+    const x0 = 30 + Math.round((maxW - (r.length * (W + GX) - GX)) / 2);
+    r.forEach((n, ci) => {
+      const name = clean((n.raw || n.label || n.id).replace(/^["']|["']$/g, '').split(/<br\s*\/?>/i)[0]);
+      nodes.push({ id: n.id, kind: 'package', name, pos: posOf({ x: x0 + ci * (W + GX), y: 30 + ri * (H + GY), w: W, h: H }) });
+    });
+  });
+  const edges = g.edges.map((e) => ({ from: e.from, to: e.to, type: 'Dependency', dir: 'Source -> Destination' }));
+  return { type: 'package', title, path, nodes, edges, code: code.replace(/\n$/, '') };
+}
+
 // Etiqueta cada diagrama con el Mermaid de origen (para el manifiesto de ubicación).
 for (const name of ['robustnessDiagram', 'useCaseDiagram', 'sequenceDiagram', 'classDiagram', 'archDiagram', 'stateDiagram']) {
   const fn = { robustnessDiagram, useCaseDiagram, sequenceDiagram, classDiagram, archDiagram, stateDiagram }[name];
@@ -600,6 +624,15 @@ const s8 = [];
     const engine = (heading.match(/\((PostgreSQL|MongoDB|DynamoDB)\)/) || [, ''])[1] || (/DynamoDB/.test(heading) ? 'DynamoDB' : 'Otros');
     s8.push(classDiagram(b.code, 'modelo-datos', `Clases - ${heading}`, [engine]));
   }
+}
+
+// 9) Arquitectura en capas (diseno logico, diagrama de paquetes)
+const s9 = [];
+{
+  const file = join(DOCS, '03-arquitectura', 'arquitectura-en-capas.md');
+  const b = mermaidBlocks(file).find((x) => kindOf(x.code) === 'flowchart');
+  used.add(b.code);
+  s9.push(packageDiagram(b.code, 'arq/capas', 'Diseno logico organizado en capas', ['Arquitectura']));
 }
 
 // 3) Robustez y 4) Secuencia
@@ -710,6 +743,7 @@ const scripts = [
   ['06-saga.js', 'Bandada U - 06 SAGA', s6],
   ['07-otros-diagramas.js', 'Bandada U - 07 Otros diagramas', s7],
   ['08-modelo-de-datos.js', 'Bandada U - 08 Modelo de datos', s8],
+  ['09-arquitectura-en-capas.js', 'Bandada U - 09 Arquitectura en capas', s9],
 ];
 
 mkdirSync(OUT, { recursive: true });
