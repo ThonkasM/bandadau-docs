@@ -105,9 +105,62 @@ function addMethods(el, ops) {
   }
 }
 
+// Clases: tamano segun el contenido y rejilla que respeta el alto de cada fila y el ancho de cada columna
+// (una tabla con 17 atributos no se solapa con la de abajo aunque falle el autoacomodo de EA).
+function layoutClasses(d) {
+  var n = d.nodes.length, ncols, sizes = [], colW = [], rowH = [], i, j, k, m, len, maxLen, nodeW, nodeH, r, c, x, y, lines;
+  ncols = n <= 4 ? n : Math.min(5, Math.ceil(Math.sqrt(n)));
+  if (ncols < 1) {
+    return;
+  }
+  for (i = 0; i < n; i++) {
+    maxLen = (d.nodes[i].name || "").length + 4;
+    lines = 0;
+    if (d.nodes[i].attrs) {
+      for (j = 0; j < d.nodes[i].attrs.length; j++) {
+        m = d.nodes[i].attrs[j];
+        len = (m.name || "").length + 3 + (m.type || "").length;
+        maxLen = len > maxLen ? len : maxLen;
+      }
+      lines += d.nodes[i].attrs.length;
+    }
+    if (d.nodes[i].ops) {
+      for (j = 0; j < d.nodes[i].ops.length; j++) {
+        m = d.nodes[i].ops[j];
+        len = (m.name || "").length + (m.params || "").length + (m.ret || "").length + 5;
+        maxLen = len > maxLen ? len : maxLen;
+      }
+      lines += d.nodes[i].ops.length;
+    }
+    nodeW = Math.min(340, Math.max(190, Math.ceil(maxLen * 6.4) + 30));
+    nodeH = 50 + 15 * lines + (d.nodes[i].attrs && d.nodes[i].ops ? 12 : 0);
+    sizes.push({ w: nodeW, h: nodeH });
+    c = i % ncols;
+    r = Math.floor(i / ncols);
+    colW[c] = Math.max(colW[c] || 0, nodeW);
+    rowH[r] = Math.max(rowH[r] || 0, nodeH);
+  }
+  for (i = 0; i < n; i++) {
+    c = i % ncols;
+    r = Math.floor(i / ncols);
+    x = 20;
+    for (k = 0; k < c; k++) {
+      x += colW[k] + 60;
+    }
+    y = 20;
+    for (k = 0; k < r; k++) {
+      y += rowH[k] + 50;
+    }
+    d.nodes[i].pos = "l=" + x + ";r=" + (x + sizes[i].w) + ";t=-" + y + ";b=-" + (y + sizes[i].h) + ";";
+  }
+}
+
 // Posicion de cada nodo segun el tipo de diagrama.
 function layoutNodes(d) {
   var i, n, col, row, cols = {}, counters = {}, x, y, w, h, k;
+  if (d.type == "class") {
+    layoutClasses(d);
+  }
   var lifeIdx = 0, lifelines = 0;
   for (i = 0; i < d.nodes.length; i++) {
     if (d.nodes[i].kind != "note") {

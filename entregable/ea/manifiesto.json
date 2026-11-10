@@ -1270,7 +1270,7 @@
    "microfrontends"
   ],
   "type": "arch",
-  "code": "flowchart TB\n    subgraph Navegador[\"admin.bandadau.com\"]\n        SHELL[\"admin-shell (Next.js static)<br/>sesión, layout, menú, rutas\"]\n        MAN[\"/mfe-manifest.json\"]\n        WC1[\"&lt;bandada-mfe-moderation&gt;<br/>Angular 21 zoneless, Shadow DOM\"]\n        WC2[\"&lt;bandada-mfe-insights&gt;<br/>React 19, Shadow DOM\"]\n    end\n    CDN[(\"mfe.bandadau.com<br/>/moderation/1.2.0/main.js<br/>/insights/0.4.1/main.js\")]\n    SHELL -->|fetch no-store| MAN\n    SHELL -->|\"script type=module + SRI\"| CDN\n    CDN --> WC1 & WC2\n    SHELL -->|\"propiedades: accessToken, graphqlUrl<br/>atributos: base-path, theme, locale\"| WC1 & WC2\n    WC1 & WC2 -->|\"CustomEvent bandada:*\"| SHELL\n    WC1 & WC2 -->|GraphQL| GW[\"admin-gateway\"]"
+  "code": "flowchart TB\n    subgraph Navegador[\"admin.bandadau.com\"]\n        SHELL[\"admin-shell (Next.js static)<br/>sesión, layout, menú, rutas\"]\n        MAN[\"/mfe-manifest.json\"]\n        WC1[\"&lt;bandada-mfe-moderation&gt;<br/>Angular 21 zoneless, Shadow DOM\"]\n        WC2[\"&lt;bandada-mfe-insights&gt;<br/>React 19, Shadow DOM\"]\n    end\n    CDN[(\"mfe.bandadau.com<br/>/moderation/1.2.0/main.js<br/>/insights/0.4.1/main.js\")]\n    SHELL -->|fetch no-store| MAN\n    SHELL -->|\"script type=module + SRI\"| CDN\n    CDN --> WC1 & WC2\n    SHELL -->|\"propiedades: accessToken, graphqlUrl<br/>atributos: base-path, theme, locale, view (opcional)\"| WC1 & WC2\n    WC1 & WC2 -->|\"CustomEvent bandada:*\"| SHELL\n    WC1 & WC2 -->|GraphQL| GW[\"admin-gateway\"]"
  },
  {
   "script": "07-otros-diagramas.js",
@@ -1502,5 +1502,105 @@
   ],
   "type": "arch",
   "code": "flowchart LR\n    C[\"bandadau-docs/contracts/ v0\"] --> ID[\"identity (JWT/JWKS)\"]\n    INF[\"infra local\"] --> ID\n    ID --> PK[\"packages auth/messaging/idempotency\"]\n    PK --> SO[\"social\"] & ME[\"media\"]\n    ME --> SO\n    PK --> EV[\"events\"] & WA[\"wallet\"] & TI[\"ticketing\"]\n    EV --> SAGA[\"SAGA UC-12/13\"]\n    WA --> SAGA\n    TI --> SAGA\n    SAGA --> NO[\"notification\"]\n    SO & ME & EV & WA --> AG[\"admin-gateway\"]\n    AG --> SH[\"admin-shell\"] --> MFE[\"MFEs\"]\n    SO & EV & WA & ME --> IN[\"insights (MCP tools)\"]\n    IN --> MFE\n    IN --> N8N[\"n8n wf-04/05\"]\n    SO --> OFF[\"mobile offline\"]\n    ID --> UC03[\"UC-03 SSO app→panel\"]\n    SH --> UC03"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Identidad — identity_db (PostgreSQL)",
+  "path": [
+   "PostgreSQL"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction TB\n    class universities {\n        <<table>>\n        +id: uuid PK\n        +name: varchar\n        +enabled: bool\n        +created_at: timestamptz\n        +updated_at: timestamptz\n    }\n    class university_domains {\n        <<table>>\n        +domain: varchar PK\n        +university_id: uuid FK\n    }\n    class users {\n        <<table>>\n        +id: uuid PK\n        +email: varchar UQ\n        +university_id: uuid FK\n        +status: varchar\n        +roles: text[]\n        +locale: varchar\n        +theme: varchar\n        +display_name: varchar?\n        +email_verified_at: timestamptz?\n        +suspended_reason: varchar?\n        +version: bigint\n        +created_at: timestamptz\n        +updated_at: timestamptz\n        +verifyEmail(now) void\n        +changeRoles(roles, actorId) void\n        +suspend(reason) void\n        +reactivate() void\n    }\n    class credentials {\n        <<table>>\n        +user_id: uuid PK FK\n        +password_hash: varchar\n        +failed_attempts: smallint\n        +locked_until: timestamptz?\n        +updated_at: timestamptz\n    }\n    class email_verifications {\n        <<table>>\n        +id: uuid PK\n        +user_id: uuid FK\n        +code_hash: char\n        +expires_at: timestamptz\n        +attempts: smallint\n        +consumed_at: timestamptz?\n        +created_at: timestamptz\n    }\n    class refresh_tokens {\n        <<table>>\n        +id: uuid PK\n        +user_id: uuid\n        +family_id: uuid\n        +client: varchar\n        +token_hash: char UQ\n        +parent_id: uuid?\n        +expires_at: timestamptz\n        +used_at: timestamptz?\n        +revoked_at: timestamptz?\n        +created_at: timestamptz\n    }\n    class handoff_codes {\n        <<table>>\n        +code_hash: char PK\n        +user_id: uuid\n        +target_app: varchar\n        +code_challenge: varchar\n        +expires_at: timestamptz\n        +used_at: timestamptz?\n        +created_ip: varchar?\n        +created_at: timestamptz\n    }\n    class signing_keys {\n        <<table>>\n        +kid: varchar PK\n        +public_jwk: jsonb\n        +private_key_enc: bytea\n        +status: varchar\n        +created_at: timestamptz\n        +activated_at: timestamptz?\n        +retired_at: timestamptz?\n    }\n    class role_changes {\n        <<table>>\n        +id: uuid PK\n        +user_id: uuid FK\n        +actor_id: uuid\n        +old_roles: text[]\n        +new_roles: text[]\n        +created_at: timestamptz\n    }\n    class mcp_tokens {\n        <<table>>\n        +id: uuid PK\n        +user_id: uuid FK\n        +label: varchar?\n        +created_at: timestamptz\n        +expires_at: timestamptz\n        +revoked_at: timestamptz?\n    }\n    class rate_limit_windows {\n        <<table>>\n        +limit_key: varchar PK\n        +window_start: timestamptz\n        +hits: int\n        +expires_at: timestamptz\n    }\n\n    universities \"1\" --> \"1..*\" university_domains : permite\n    universities \"1\" --> \"0..*\" users : agrupa\n    users \"1\" --> \"1\" credentials : autentica con\n    users \"1\" --> \"0..*\" email_verifications : verifica\n    users \"1\" --> \"0..*\" role_changes : audita\n    users \"1\" --> \"0..*\" mcp_tokens : emite\n    users \"1\" ..> \"0..*\" refresh_tokens : renueva\n    users \"1\" ..> \"0..*\" handoff_codes : traspasa"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Eventos — events_db (PostgreSQL)",
+  "path": [
+   "PostgreSQL"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class events {\n        <<table>>\n        +id: uuid PK\n        +organizer_id: uuid\n        +university_id: uuid\n        +title: varchar\n        +description: text?\n        +cover_media_id: uuid?\n        +venue: varchar\n        +starts_at: timestamptz\n        +ends_at: timestamptz\n        +capacity: int\n        +seats_taken: int\n        +price_credits: bigint\n        +status: varchar\n        +cancel_reason: varchar?\n        +version: bigint\n        +created_at: timestamptz\n        +updated_at: timestamptz\n        +published_at: timestamptz?\n        +publish(now) void\n        +cancel(reason) void\n        +reserveSeat() void\n        +releaseSeat() void\n    }\n    class registrations {\n        <<table>>\n        +id: uuid PK\n        +event_id: uuid FK\n        +user_id: uuid\n        +status: varchar\n        +price_credits: bigint\n        +failure_reason: varchar?\n        +ticket_id: uuid?\n        +idempotency_key: uuid?\n        +version: bigint\n        +created_at: timestamptz\n        +updated_at: timestamptz\n        +confirmed_at: timestamptz?\n        +cancelled_at: timestamptz?\n        +confirm(ticketId) void\n        +fail(reason) void\n        +requestCancellation(now, deadline) void\n        +markCancelled() void\n    }\n    class saga_instances {\n        <<table>>\n        +id: uuid PK\n        +registration_id: uuid FK\n        +type: varchar\n        +status: varchar\n        +step: varchar\n        +attempt: smallint\n        +deadline_at: timestamptz?\n        +next_retry_at: timestamptz?\n        +context: jsonb\n        +failure_reason: varchar?\n        +history: jsonb\n        +version: bigint\n        +started_at: timestamptz\n        +updated_at: timestamptz\n        +finished_at: timestamptz?\n        +onReply(reply) decision\n        +onTimeout(now) decision\n        +isTerminal() bool\n    }\n\n    events \"1\" --> \"0..*\" registrations : recibe\n    registrations \"1\" --> \"1..2\" saga_instances : orquesta"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Billetera — wallet_db (PostgreSQL)",
+  "path": [
+   "PostgreSQL"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class wallets {\n        <<table>>\n        +user_id: uuid PK\n        +balance_credits: bigint\n        +version: bigint\n        +created_at: timestamptz\n        +updated_at: timestamptz\n        +credit(amount, ref) ledger_entries\n        +debit(amount, ref) ledger_entries\n        +refund(amount, ref) ledger_entries\n    }\n    class ledger_entries {\n        <<table>>\n        +id: uuid PK\n        +wallet_user_id: uuid FK\n        +type: varchar\n        +amount_credits: bigint\n        +balance_after: bigint\n        +operation_ref: varchar UQ\n        +saga_id: uuid?\n        +registration_id: uuid?\n        +event_id: uuid?\n        +top_up_id: uuid?\n        +description: varchar?\n        +created_at: timestamptz\n    }\n    class top_ups {\n        <<table>>\n        +id: uuid PK\n        +user_id: uuid\n        +package: varchar\n        +amount_credits: bigint\n        +price_minor: bigint\n        +currency: varchar\n        +status: varchar\n        +gateway_ref: varchar? UQ\n        +idempotency_key: uuid?\n        +expires_at: timestamptz\n        +paid_at: timestamptz?\n        +created_at: timestamptz\n        +updated_at: timestamptz\n        +markPaid(gatewayRef) void\n        +expire() void\n    }\n\n    wallets \"1\" --> \"0..*\" ledger_entries : registra\n    wallets \"1\" ..> \"0..*\" top_ups : recarga\n    top_ups \"0..1\" ..> \"1\" ledger_entries : acredita"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Soporte común — outbox, inbox e idempotencia (PostgreSQL)",
+  "path": [
+   "PostgreSQL"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class outbox {\n        <<table>>\n        +id: uuid PK\n        +exchange: varchar\n        +routing_key: varchar\n        +payload: jsonb\n        +headers: jsonb\n        +aggregate_id: uuid?\n        +created_at: timestamptz\n        +published_at: timestamptz?\n        +attempts: int\n        +last_error: text?\n    }\n    class processed_messages {\n        <<table>>\n        +message_id: uuid PK\n        +consumer: varchar\n        +processed_at: timestamptz\n    }\n    class idempotency_keys {\n        <<table>>\n        +scope_key: varchar PK\n        +status: varchar\n        +request_hash: char\n        +principal: varchar\n        +lock_expires_at: timestamptz\n        +response_status: int?\n        +response_headers: jsonb?\n        +response_body: text?\n        +created_at: timestamptz\n        +expires_at: timestamptz\n    }"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Social — social (MongoDB)",
+  "path": [
+   "MongoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction TB\n    class profiles {\n        <<collection>>\n        +_id: uuid PK\n        +displayName: string\n        +universityId: uuid?\n        +career: string?\n        +semester: int?\n        +bio: string?\n        +interests: string[]\n        +avatarMediaId: uuid?\n        +pendingAvatarMediaId: uuid?\n        +avatarStatus: string?\n        +createdAt: date\n        +updatedAt: date\n        +update(patch) void\n    }\n    class posts {\n        <<collection>>\n        +_id: uuid PK\n        +clientId: uuid UQ\n        +authorId: uuid\n        +authorUniversityId: uuid?\n        +authorCareer: string?\n        +text: string\n        +hashtags: string[]\n        +visibility: string\n        +groupId: uuid?\n        +status: string\n        +hiddenReason: string?\n        +hiddenAt: date?\n        +mediaIds: uuid[]\n        +reactionCounts: object\n        +commentsCount: int\n        +openReportsCount: int\n        +createdAt: date\n        +updatedAt: date\n        +hide(reason) void\n        +remove(byUserId) void\n    }\n    class comments {\n        <<collection>>\n        +_id: uuid PK\n        +postId: uuid FK\n        +authorId: uuid\n        +parentId: uuid? FK\n        +text: string\n        +status: string\n        +replyCount: int\n        +openReportsCount: int\n        +createdAt: date\n    }\n    class reactions {\n        <<collection>>\n        +postId: uuid FK\n        +userId: uuid\n        +type: string\n        +updatedAt: date\n    }\n    class follows {\n        <<collection>>\n        +followerId: uuid\n        +followeeId: uuid\n        +createdAt: date\n    }\n    class groups {\n        <<collection>>\n        +_id: uuid PK\n        +name: string\n        +subject: string\n        +privacy: string\n        +ownerId: uuid\n        +membersCount: int\n        +createdAt: date\n    }\n    class groupMemberships {\n        <<collection>>\n        +groupId: uuid FK\n        +userId: uuid\n        +role: string\n        +status: string\n        +requestedAt: date\n        +updatedAt: date\n        +approve(by) void\n        +reject(by) void\n    }\n    class contentReports {\n        <<collection>>\n        +_id: uuid PK\n        +targetType: string\n        +targetId: uuid\n        +targetAuthorId: uuid\n        +reporterId: uuid\n        +reason: string\n        +details: string?\n        +status: string\n        +resolution: string?\n        +resolutionNote: string?\n        +resolvedBy: uuid?\n        +createdAt: date\n        +resolvedAt: date?\n        +resolve(decision, by) void\n    }\n    class mediaAssetViews {\n        <<collection>>\n        +_id: uuid PK\n        +ownerId: uuid\n        +kind: string\n        +status: string\n        +updatedAt: date\n    }\n\n    profiles \"1\" --> \"0..*\" posts : publica\n    posts \"1\" --> \"0..*\" comments : tiene\n    comments \"0..1\" --> \"0..*\" comments : responde a\n    posts \"1\" --> \"0..*\" reactions : recibe\n    profiles \"1\" --> \"0..*\" follows : sigue\n    groups \"1\" --> \"0..*\" groupMemberships : integra\n    groups \"0..1\" --> \"0..*\" posts : contiene\n    posts \"1\" ..> \"0..*\" contentReports : denunciado en\n    posts \"0..*\" ..> \"0..*\" mediaAssetViews : adjunta"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Medios — media (MongoDB)",
+  "path": [
+   "MongoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class media {\n        <<collection>>\n        +_id: uuid PK\n        +ownerId: uuid\n        +kind: string\n        +purpose: string\n        +mimeType: string\n        +sizeBytes: int\n        +durationSeconds: int?\n        +fileName: string?\n        +status: string\n        +storageKey: string\n        +thumbnailKey: string?\n        +tags: string[]\n        +ocrText: string?\n        +moderationResults: ModerationResult[]\n        +finalDecision: string?\n        +uploadExpiresAt: date\n        +createdAt: date\n        +updatedAt: date\n        +markUploaded(meta) void\n        +applyModeration(result, thresholds) void\n        +decide(decision, by) void\n    }\n    class ModerationResult {\n        <<embedded>>\n        +modelName: string\n        +modelVersion: string\n        +labels: object\n        +maxScore: float\n        +decision: string\n        +frameOffsetsSec: float[]\n        +createdAt: date\n    }\n\n    media \"1\" *-- \"0..*\" ModerationResult : evalua"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Entradas — bandada-ticketing (DynamoDB)",
+  "path": [
+   "DynamoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class ticket {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +entity: string\n        +ticketId: uuid\n        +registrationId: uuid\n        +eventId: uuid\n        +userId: uuid\n        +eventTitle: string\n        +eventStartsAt: string\n        +eventEndsAt: string?\n        +venue: string\n        +organizerId: uuid?\n        +staffUserIds: uuid[]\n        +status: string\n        +issuedAt: string\n        +usedAt: string?\n        +usedBy: uuid?\n        +voidedAt: string?\n        +use(by, now) void\n        +void(now) void\n    }\n    class GSI1 {\n        <<index>>\n        +gsi1pk: string\n        +gsi1sk: string\n    }\n    class GSI2 {\n        <<index>>\n        +gsi2pk: string\n        +gsi2sk: string\n    }\n    class GSI3 {\n        <<index>>\n        +gsi3pk: string\n        +gsi3sk: string\n    }\n\n    ticket \"1\" ..> \"1\" GSI1 : por usuario y fecha del evento\n    ticket \"1\" ..> \"1\" GSI2 : por inscripcion\n    ticket \"1\" ..> \"1\" GSI3 : por usuario y adquisicion"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Notificaciones — bandada-notifications (DynamoDB)",
+  "path": [
+   "DynamoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class notification {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +id: uuid\n        +userId: uuid\n        +type: string\n        +params: object\n        +data: object\n        +locale: string\n        +readAt: string?\n        +createdAt: string\n        +expiresAt: int\n        +pushStatus: string\n        +emailStatus: string\n        +markRead(now) void\n    }\n    class device_token {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +userId: uuid\n        +token: string\n        +platform: string\n        +appVersion: string?\n        +deviceName: string?\n        +webPush: object?\n        +gsi1pk: string\n        +gsi1sk: string\n    }\n    class notification_preference {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +userId: uuid\n        +locale: string\n        +channels: object\n        +mutedTypes: string[]\n        +unreadCount: int\n        +updatedAt: string\n        +allows(type, channel) bool\n    }\n    class inbox_record {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +processedAt: string\n        +expiresAt: int\n        +refs: string[]\n    }\n\n    notification_preference \"1\" --> \"0..*\" notification : filtra\n    notification_preference \"1\" --> \"0..*\" device_token : registra"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Insights — bandada-insights (DynamoDB)",
+  "path": [
+   "DynamoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class report {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +id: uuid\n        +question: string\n        +locale: string\n        +status: string\n        +markdown: string?\n        +dataset: object[]?\n        +chart: object?\n        +audioKey: string?\n        +fidelityWarning: bool\n        +requestedBy: uuid\n        +agentRunId: uuid?\n        +createdAt: string\n        +gsi1pk: string\n        +gsi1sk: string\n        +complete(output) void\n        +fail(code) void\n    }\n    class agent_run {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +id: uuid\n        +agent: string\n        +trigger: string\n        +requestedBy: uuid?\n        +locale: string\n        +status: string\n        +steps: int\n        +toolsUsed: string[]\n        +tokens: object\n        +costUsdMicros: int\n        +startedAt: string\n        +finishedAt: string?\n        +expiresAt: int\n        +recordStep(step) void\n    }\n    class agent_step {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +index: int\n        +kind: string\n        +toolName: string?\n        +argsRedacted: object\n        +resultSize: int\n        +durationMs: int\n        +expiresAt: int\n    }\n    class alert {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +id: uuid\n        +kind: string\n        +severity: string\n        +status: string\n        +fingerprint: string\n        +message: string\n        +explanation: string?\n        +occurrences: int\n        +firstSeenAt: string\n        +lastSeenAt: string\n        +gsi1pk: string\n        +gsi1sk: string\n        +raiseOrBump(now) void\n        +acknowledge(by) void\n    }\n    class metric_point {\n        <<item>>\n        +pk: string PK\n        +sk: string PK\n        +name: string\n        +date: string\n        +value: float\n    }\n\n    agent_run \"1\" --> \"0..*\" agent_step : registra\n    agent_run \"1\" --> \"0..*\" report : genera\n    agent_run \"1\" ..> \"0..*\" alert : levanta"
+ },
+ {
+  "script": "08-modelo-de-datos.js",
+  "scriptTitle": "Bandada U - 08 Modelo de datos",
+  "title": "Clases - Idempotencia compartida — bandada-idempotency (DynamoDB)",
+  "path": [
+   "DynamoDB"
+  ],
+  "type": "class",
+  "code": "classDiagram\n    direction LR\n    class idempotency_record {\n        <<item>>\n        +pk: string PK\n        +status: string\n        +requestHash: string\n        +principal: string\n        +lockExpiresAt: int\n        +responseStatus: int?\n        +responseHeaders: object?\n        +responseBody: string?\n        +responseTooLarge: bool?\n        +expiresAt: int\n    }"
  }
 ]

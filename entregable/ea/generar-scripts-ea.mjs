@@ -252,6 +252,9 @@ function parseMember(txt) {
     if (!m) return { op: { name: t, vis } };
     return { op: { name: m[1].trim(), params: m[2].trim(), ret: m[4].trim(), isStatic: m[3] === '$', vis } };
   }
+  // `nombre: Tipo` (estilo UML) o `Tipo nombre` (estilo Mermaid/Java)
+  const named = t.match(/^(\w+)\s*:\s*(.+)$/);
+  if (named) return { attr: { name: named[1], type: named[2].trim(), vis } };
   const parts = t.split(/\s+/);
   if (parts.length >= 2) return { attr: { name: parts[parts.length - 1], type: parts.slice(0, -1).join(' '), vis } };
   return { attr: { name: t, type: '', vis } };
@@ -586,6 +589,19 @@ const s2 = [];
   }
 }
 
+// 8) Modelo de datos: una clase por tabla, colección o ítem de cada base (docs/02-iconix/06-modelo-estatico/modelo-datos.md)
+const s8 = [];
+{
+  const file = join(DOCS, '02-iconix', '06-modelo-estatico', 'modelo-datos.md');
+  for (const b of mermaidBlocks(file)) {
+    if (kindOf(b.code) !== 'classDiagram') continue;
+    used.add(b.code);
+    const heading = b.heading.replace(/`/g, '');
+    const engine = (heading.match(/\((PostgreSQL|MongoDB|DynamoDB)\)/) || [, ''])[1] || (/DynamoDB/.test(heading) ? 'DynamoDB' : 'Otros');
+    s8.push(classDiagram(b.code, 'modelo-datos', `Clases - ${heading}`, [engine]));
+  }
+}
+
 // 3) Robustez y 4) Secuencia
 const s3 = [];
 const s4 = [];
@@ -693,6 +709,7 @@ const scripts = [
   ['05-arquitectura-y-despliegue.js', 'Bandada U - 05 Arquitectura y despliegue', s5],
   ['06-saga.js', 'Bandada U - 06 SAGA', s6],
   ['07-otros-diagramas.js', 'Bandada U - 07 Otros diagramas', s7],
+  ['08-modelo-de-datos.js', 'Bandada U - 08 Modelo de datos', s8],
 ];
 
 mkdirSync(OUT, { recursive: true });

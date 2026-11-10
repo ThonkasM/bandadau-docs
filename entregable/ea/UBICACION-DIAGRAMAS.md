@@ -9,7 +9,7 @@ Cómo usarla: ejecuta el script de EA, abre el diagrama con el **nombre exacto**
 expórtalo como imagen (clic derecho > *Save as Image* o `Ctrl+Shift+...` según versión) y sustituye o agrega la
 figura en la sección indicada. Los nombres de paquete son los que crea el script en el *Project Browser*.
 
-**Resumen:** 146 diagramas en EA; **65** aparecen en el documento (con figura y sección) y **81** no
+**Resumen:** 156 diagramas en EA; **64** aparecen en el documento (con figura y sección) y **92** no
 están en el Word (columna «Sugerencia»). La numeración de figuras puede moverse si se agregan o quitan
 figuras: vuelve a generar este archivo después de reconstruir el documento.
 
@@ -159,7 +159,7 @@ Script: `scripts/06-saga.js` · paquete EA: «Bandada U - 06 SAGA» · 5 de 7 di
 
 ## 07 · Otros diagramas
 
-Script: `scripts/07-otros-diagramas.js` · paquete EA: «Bandada U - 07 Otros diagramas» · 12 de 44 diagramas están en el documento.
+Script: `scripts/07-otros-diagramas.js` · paquete EA: «Bandada U - 07 Otros diagramas» · 11 de 44 diagramas están en el documento.
 
 | Diagrama en EA | Paquete | Figura | Sección del documento / Sugerencia |
 |---|---|---|---|
@@ -185,7 +185,7 @@ Script: `scripts/07-otros-diagramas.js` · paquete EA: «Bandada U - 07 Otros di
 | idempotencia - 1. Los cinco mecanismos y qué protege cada uno | arquitectura / idempotencia | Figura 58 | 4.5.3. Idempotencia de extremo a extremo |
 | idempotencia - 2.4 Estados y carreras | arquitectura / idempotencia | — (no está en el Word) | 4.5. Integración de componentes |
 | mcp - 1. Qué es MCP y para qué lo usamos | arquitectura / mcp | Figura 61 | 4.5.5. Agentes, MCP y automatización |
-| microfrontends - 1. Decisión: Web Components en runtime | arquitectura / microfrontends | Figura 60 | 4.5.4. Panel de administración: GraphQL y microfrontends |
+| microfrontends - 1. Decisión: Web Components en runtime | arquitectura / microfrontends | — (no está en el Word) | 4.5. Integración de componentes |
 | ml-dl - 4.1 Estados de MediaAsset | arquitectura / ml-dl | — (no está en el Word) | 4.5. Integración de componentes |
 | ml-dl - 4.3 Flujo | arquitectura / ml-dl | — (no está en el Word) | 4.5. Integración de componentes |
 | ml-dl - 6. MLOps mínimo | arquitectura / ml-dl | — (no está en el Word) | 4.5. Integración de componentes |
@@ -207,6 +207,23 @@ Script: `scripts/07-otros-diagramas.js` · paquete EA: «Bandada U - 07 Otros di
 | infraestructura - 5.1 Flujo general | infraestructura / infraestructura | — (no está en el Word) | 4.2. Diseño de la arquitectura del sistema |
 | infraestructura - 5.3 Despliegue independiente de microfrontends (D5) | infraestructura / infraestructura | — (no está en el Word) | 4.5. Integración de componentes |
 | roadmap-y-sprints - 4. Dependencias críticas | plan / roadmap-y-sprints | Figura 66 | Anexo G. Plan de trabajo y riesgos (subsección: 4. Dependencias críticas) |
+
+## 08-modelo-de-datos.js
+
+Script: `scripts/08-modelo-de-datos.js` · paquete EA: «Bandada U - 08 Modelo de datos» · 0 de 10 diagramas están en el documento.
+
+| Diagrama en EA | Paquete | Figura | Sección del documento / Sugerencia |
+|---|---|---|---|
+| Clases - Identidad — identity_db (PostgreSQL) | PostgreSQL | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Eventos — events_db (PostgreSQL) | PostgreSQL | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Billetera — wallet_db (PostgreSQL) | PostgreSQL | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Soporte común — outbox, inbox e idempotencia (PostgreSQL) | PostgreSQL | — (no está en el Word) | 4.5. Integración de componentes |
+| Clases - Social — social (MongoDB) | MongoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Medios — media (MongoDB) | MongoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Entradas — bandada-ticketing (DynamoDB) | DynamoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Notificaciones — bandada-notifications (DynamoDB) | DynamoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Insights — bandada-insights (DynamoDB) | DynamoDB | — (no está en el Word) | Anexo opcional «Diagramas complementarios» |
+| Clases - Idempotencia compartida — bandada-idempotency (DynamoDB) | DynamoDB | — (no está en el Word) | 4.5. Integración de componentes |
 
 ## No importado a EA
 

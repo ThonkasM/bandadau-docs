@@ -1311,3 +1311,12 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 - **Hallazgo en producción:** el rol IAM del EC2 no tenía `dynamodb:Scan` sobre `bandada-ticketing` (`ticketValidations` y la herramienta MCP `get_ticket_stats` fallaban con `AccessDeniedException`). Se agregó una sentencia aparte, solo `Scan` sobre esa tabla, con `terraform apply` (1 cambio, 0 creados, 0 destruidos).
 - **Verificado:** consulta `ticketValidations` en producción responde sin error (lista vacía: aún no se escaneó ninguna entrada); pruebas de `ticketing-service` (45) y del panel (12); Créditos e Inscripciones en el panel local con el mock.
 - **NO verificado:** el informe de Asistencia con datos reales (hay que escanear al menos una entrada); pruebas de integración del gateway (necesitan RabbitMQ y no corrieron).
+
+### 2026-11-09 (noche) — Diagramas de clases UML 2.5 de las bases de datos para EA
+
+**Agente:** Claude Code · **Repo:** `bandadau-docs`.
+
+- **Pedido de la cátedra:** diagramas de clases UML 2.5 basados en las tablas de cada base. Se creó `docs/02-iconix/06-modelo-estatico/modelo-datos.md` (10 diagramas Mermaid: identity, events, wallet, social, media, ticketing, notifications, insights, idempotency y mensajería) a partir de Flyway, la migración de Laravel y los mapeadores de Mongo/DynamoDB.
+- **Generador EA:** `generar-scripts-ea.mjs` ahora produce `08-modelo-de-datos.js`; se corrigió `parseMember` (atributos `nombre: Tipo`) y `runtime.js` distribuye las clases en cuadrícula según su tamaño. Total: 156 diagramas en 8 scripts.
+- **Vista previa:** `entregable/ea/previsualizacion/` (PNG y Word) con aproximación Mermaid del estilo EA.
+- **NO verificado:** el script 08 no se ejecutó en un EA real (solo la API simulada de `probar-scripts.mjs`); el aspecto en EA puede variar.

@@ -21,10 +21,13 @@ Node, Mermaid ni nada más, solo los archivos de `scripts/`.
 | `05-arquitectura-y-despliegue.js` | 4 | Vista de contenedores, mapa de contextos DDD, despliegue local (Docker Compose) y despliegue en la nube (AWS, Azure y GCP con Tailscale) |
 | `06-saga.js` | 7 | SAGA de inscripción: secuencia del camino feliz y del fallo con compensación, y máquinas de estado de `SagaInstance` (REGISTRATION y CANCELLATION) y `Registration` (versión del documento de la SAGA y versión detallada de UC-12 con el estado compuesto `COMPENSATING`) |
 | `07-otros-diagramas.js` | 44 | Todo lo demás de `docs/`: flujos de arquitectura, automatización n8n, pipeline de ML, IA local, seguridad, CI, estados (media, idempotencia, llaves, tema, cola offline), clases de patrones (DDD, hexagonal, clean) y secuencias restantes |
+| `08-modelo-de-datos.js` | 10 | Diagramas de clases UML 2.5 de las tablas/colecciones de cada base de datos (PostgreSQL, MongoDB, DynamoDB) con «table», «collection», «item», PK/FK/UQ y asociaciones; fuente: `docs/02-iconix/06-modelo-estatico/modelo-datos.md` |
 
-En total son **146 diagramas** en 7 scripts. Cada script crea **un paquete raíz propio** (por ejemplo «Bandada U - 03 Robustez») bajo el primer
+En total son **156 diagramas** en 8 scripts. Cada script crea **un paquete raíz propio** (por ejemplo «Bandada U - 03 Robustez») bajo el primer
 modelo del proyecto, con un subpaquete por UC o servicio. Si ese paquete ya existe, el script se
 detiene sin tocar nada: bórralo antes de volver a ejecutarlo.
+
+**Vista previa del modelo de datos:** [`previsualizacion/`](previsualizacion/) trae un Word y PNG con una aproximación (Mermaid) de cómo se ven los 10 diagramas; el aspecto final lo da EA al ejecutar el script 08. Se regenera con `node generar-scripts-ea.mjs`.
 
 **¿Dónde va cada diagrama en el Word?** Ver [`UBICACION-DIAGRAMAS.md`](UBICACION-DIAGRAMAS.md): para cada diagrama de EA indica la figura y la sección del documento (o dónde ponerlo si no está).
 
