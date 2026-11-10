@@ -50,6 +50,32 @@ Reglas:
 
 ## Entradas
 
+### 2026-11-10 — Manual de calidad (SQAP, estructura IEEE 730)
+
+| Campo | Valor |
+|---|---|
+| Agente / persona | Claude Code (Sonnet 5.5) · a petición del equipo |
+| Rama | `main` |
+| Objetivo | Manual de calidad de Bandada U equivalente al SQAP de Maminco |
+| Componentes | `bandadau-docs/docs/04-patrones-y-reglas/`, `bandadau-docs/entregable/` |
+
+**Archivos tocados**
+- `docs/04-patrones-y-reglas/manual-de-calidad-sqap.md` — nuevo (MC-BU-001 v1.0)
+- `docs/00-indice.md` — enlace al manual
+- `entregable/capitulos/08-anexos.md` — Anexo J (incluye el manual)
+
+**Decisiones**
+- Roles de calidad tomados de `roadmap-y-sprints.md` §5; la independencia revisor/autor y la tabla de severidades se marcan como supuestas (S).
+
+**Pendientes**
+- [ ] Ejecutar cobertura y pruebas de Java (JDK 25), PHP y `bandadau-ml`, y registrar la línea base en el manual (§1.2).
+- [ ] Registrar actas RR/PDR/CDR/DR o declarar el alcance real de la revisión (`08-revisiones.md`).
+- [ ] Confirmar con el equipo las cifras de §1.2 en su propia máquina.
+
+**Verificación**
+- `pnpm test` por componente: 787 pruebas aprobadas, 0 fallidas, 49 omitidas (Node, Expo, landing, panel, shared). Java, PHP y ML no ejecutados.
+- `node entregable/build.mjs --no-docx --no-render`: el Anexo J se incluye. `make links` falla por enlaces ya rotos de capturas del entregable; ninguno es de estos archivos.
+
 ### 2026-10-15 — Tickets: filtro Recientes/Por fecha (sort global + GSI3, ADR-0020)
 
 **Agente:** OpenCode · **Repos:** `bandadau-docs`, `bandadau-backend`, `bandadau-infra`, `bandadau-frontend`.

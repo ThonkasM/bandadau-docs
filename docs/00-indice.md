@@ -82,6 +82,7 @@ algo lo contradice, se corrige el otro documento o se escribe un ADR.
 | [design-tokens-y-temas.md](04-patrones-y-reglas/design-tokens-y-temas.md) | Toda UI (modo claro/oscuro) |
 | [i18n.md](04-patrones-y-reglas/i18n.md) | Toda UI y contenido generado (es/en) |
 | [testing-strategy.md](04-patrones-y-reglas/testing-strategy.md) | Todo |
+| [manual-de-calidad-sqap.md](04-patrones-y-reglas/manual-de-calidad-sqap.md) | Todo | Manual de calidad (SQAP, estructura IEEE 730): estándares, roles, métricas medidas, riesgos de calidad |
 | [definition-of-done.md](04-patrones-y-reglas/definition-of-done.md) | Todo PR |
 
 ## 05 · Infraestructura

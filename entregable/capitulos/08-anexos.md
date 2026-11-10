@@ -70,3 +70,7 @@ Los contratos viven en el repositorio de documentación y se escriben antes que 
 ## Anexo I. Glosario
 
 @@include 01-vision/glosario.md demote=1
+
+## Anexo J. Manual de calidad (SQAP)
+
+@@include 04-patrones-y-reglas/manual-de-calidad-sqap.md demote=1 dropheading=1
