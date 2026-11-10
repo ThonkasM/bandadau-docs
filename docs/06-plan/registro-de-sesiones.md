@@ -1353,3 +1353,12 @@ A-5 (UC-14 escáner con `expo-camera`), A-9 (pruebas Jest/RNTL + Maestro), A-10 
 
 - Nuevo `docs/03-arquitectura/arquitectura-en-capas.md` (fuente Mermaid) y script `09-arquitectura-en-capas.js`: diagrama de paquetes UML 2.5 con clientes, API Gateway, admin-gateway, las cuatro capas internas de un servicio y los almacenes (RabbitMQ, PostgreSQL, MongoDB, DynamoDB, S3). El generador ganó `packageDiagram` (filas por camino más largo) y el tipo `Package` en `runtime.js`. Total: 157 diagramas en 9 scripts.
 - **NO verificado:** el script 09 no se ejecutó en un EA real (solo la API simulada); la vista previa `previsualizacion/img/11-capas.png` es una aproximación del estilo EA.
+
+### 2026-11-10 — Reportes completos con gráficos y poblamiento de historial (SAGA y asistencia)
+
+**Agente:** Claude Code · **Repos:** `bandadau-admin` (shell, sin commit), `bandadau-infra` (seed, sin commit), `bandadau-docs`.
+
+- **Reportes (admin):** nueva pestaña **SAGAs**; en Asistencia, tabla y gráfico por evento (inscritos vs escaneadas); en Inscripciones, filtro Todos/Próximos/Realizados, estado y gráfico de cupo; en Créditos, gráfico de líneas por día. Nuevo componente `BarChart` (SVG, tokens, tabla accesible). **Bug corregido:** la consulta de asistencia pedía 500 filas y el gateway la rechaza por complejidad (`QUERY_TOO_COMPLEX`, límite 1000) en cuanto hay datos; ahora pide 90.
+- **Poblamiento en producción:** `seed/saga-history.mjs` creó 7 eventos (5 realizados y 2 próximos) y 30 inscripciones con la SAGA real (confirmadas, `INSUFFICIENT_FUNDS`, `EVENT_FULL` rechazado, 1 cancelación con reembolso) y 14 recargas; `seed/saga-history-backdate.mjs` movió fechas de eventos, inscripciones, SAGAs, libro mayor y recargas (SQL en `events_db` y `wallet_db`, probado antes en un Postgres temporal) y marcó 18 tickets como asistidos en DynamoDB. Es idempotente (fechas absolutas). **Escribe directo en las bases: solo demo.**
+- **Verificado por el gateway:** dashboard del rango = 46 confirmadas, 5 fallidas, 1 cancelada, 1220 créditos recargados y 555 gastados; billetera con 9 días con movimiento; SAGAs 44 completadas, 5 compensadas y 1 de cancelación completada.
+- **NO verificado:** el reporte de asistencia con los 18 escaneos (la consulta falló por complejidad al comprobar; el arreglo está en el código, aún sin desplegar); los gráficos nuevos en un navegador contra datos reales.
