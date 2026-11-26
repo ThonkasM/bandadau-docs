@@ -1,0 +1,455 @@
+{
+  "info": {
+    "name": "Bandada U · Admin GraphQL",
+    "description": "Consultas al admin-gateway (https://api.bandadau.lat/graphql) con scripts de prueba. 1) Completa email y password en Variables (usuario ADMIN). 2) Ejecuta '1. Login'. 3) Corre la colección completa (Runner).",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "variable": [
+    {
+      "key": "baseUrl",
+      "value": "https://api.bandadau.lat"
+    },
+    {
+      "key": "email",
+      "value": ""
+    },
+    {
+      "key": "password",
+      "value": "",
+      "type": "secret"
+    },
+    {
+      "key": "accessToken",
+      "value": "",
+      "type": "any"
+    },
+    {
+      "key": "from",
+      "value": ""
+    },
+    {
+      "key": "to",
+      "value": ""
+    }
+  ],
+  "item": [
+    {
+      "name": "1. Login (guarda el token)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Accept-Language",
+            "value": "es"
+          },
+          {
+            "key": "X-Bandada-Client",
+            "value": "admin"
+          }
+        ],
+        "auth": {
+          "type": "noauth"
+        },
+        "url": {
+          "raw": "{{baseUrl}}/api/v1/auth/login",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "api",
+            "v1",
+            "auth",
+            "login"
+          ]
+        },
+        "body": {
+          "mode": "raw",
+          "raw": "{\n  \"email\": \"{{email}}\",\n  \"password\": \"{{password}}\"\n}"
+        },
+        "description": "Usa las variables email y password de la colección (tipo secreto). Guarda accessToken (dura 15 min; vuelve a ejecutar este paso si expira). Envía X-Bandada-Client: admin para obtener un token con aud=bandada-admin, el único que acepta el GraphQL del panel."
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "pm.test('login 200', () => pm.response.to.have.status(200));",
+              "const json = pm.response.json();",
+              "pm.test('devuelve accessToken', () => pm.expect(json.accessToken).to.be.a('string').and.not.empty);",
+              "pm.test('el usuario tiene rol ADMIN o MODERATOR', () => pm.expect(json.user.roles.some(r => ['ADMIN','MODERATOR'].includes(r))).to.be.true);",
+              "const aud = JSON.parse(atob(json.accessToken.split('.')[1].replace(/-/g,'+').replace(/_/g,'/'))).aud;\npm.test('el token es de la audiencia del panel (bandada-admin)', () => pm.expect(aud).to.eql('bandada-admin'));",
+              "if (json.accessToken) pm.collectionVariables.set('accessToken', json.accessToken);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "2. me",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Me { me { id email roles displayName } }",
+            "variables": "{}"
+          }
+        },
+        "description": "",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));",
+              "pm.test('trae roles', () => pm.expect(body.data.me.roles).to.be.an('array').that.is.not.empty);"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "3. dashboard (últimos 7 días)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Dashboard($range: DateRangeInput!) {\n  dashboard(range: $range) {\n    activeUsers newUsers posts comments reactions\n    registrationsConfirmed registrationsFailed\n    creditsToppedUp creditsSpent flaggedContent openAlerts\n  }\n}",
+            "variables": "{\n  \"range\": {\n    \"from\": \"{{from}}\",\n    \"to\": \"{{to}}\"\n  }\n}"
+          }
+        },
+        "description": "Solo ADMIN. Las variables from/to se calculan en el pre-request.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "prerequest",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const d = (n) => new Date(Date.now() - n*864e5).toISOString().slice(0,10);",
+              "pm.collectionVariables.set('from', d(7));",
+              "pm.collectionVariables.set('to', d(0));"
+            ]
+          }
+        },
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));",
+              "const d = body.data.dashboard;",
+              "pm.test('contadores numéricos y no negativos', () => ['activeUsers','newUsers','posts','registrationsConfirmed','creditsSpent'].forEach(k => pm.expect(d[k], k).to.be.a('number').and.at.least(0)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "4. users (primeros 5)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Users($first: Int) {\n  users(first: $first) {\n    edges { node { id email roles status } }\n    pageInfo { hasNextPage endCursor }\n  }\n}",
+            "variables": "{\n  \"first\": 5\n}"
+          }
+        },
+        "description": "",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));",
+              "pm.test('máximo 5 usuarios', () => pm.expect(body.data.users.edges.length).to.be.at.most(5));",
+              "pm.test('cada usuario tiene correo', () => body.data.users.edges.forEach(e => pm.expect(e.node.email).to.include('@')));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "5. events",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Events { events(first: 10) { id title startsAt venue capacity seatsTaken priceCredits status } }",
+            "variables": "{}"
+          }
+        },
+        "description": "",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));",
+              "pm.test('cupo no excedido', () => body.data.events.forEach(e => pm.expect(e.seatsTaken).to.be.at.most(e.capacity)));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "6. contentReports (abiertas)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Reports { contentReports(status: OPEN, first: 20) { id targetType reason status } }",
+            "variables": "{}"
+          }
+        },
+        "description": "",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "7. alerts (abiertas)",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          },
+          {
+            "key": "Authorization",
+            "value": "Bearer {{accessToken}}"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Alerts { alerts(first: 20) { id severity kind message status resource } }",
+            "variables": "{}"
+          }
+        },
+        "description": "",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('HTTP 200', () => pm.response.to.have.status(200));",
+              "pm.test('sin errores GraphQL', () => pm.expect(body.errors, JSON.stringify(body.errors)).to.be.undefined);",
+              "pm.test('responde en menos de 3 s', () => pm.expect(pm.response.responseTime).to.be.below(3000));"
+            ]
+          }
+        }
+      ]
+    },
+    {
+      "name": "8. Sin token → rechazado",
+      "request": {
+        "method": "POST",
+        "header": [
+          {
+            "key": "Content-Type",
+            "value": "application/json"
+          }
+        ],
+        "url": {
+          "raw": "{{baseUrl}}/graphql",
+          "host": [
+            "{{baseUrl}}"
+          ],
+          "path": [
+            "graphql"
+          ]
+        },
+        "body": {
+          "mode": "graphql",
+          "graphql": {
+            "query": "query Me { me { id } }",
+            "variables": "{}"
+          }
+        },
+        "description": "Prueba negativa: sin Authorization la consulta debe fallar.",
+        "auth": {
+          "type": "noauth"
+        }
+      },
+      "event": [
+        {
+          "listen": "test",
+          "script": {
+            "type": "text/javascript",
+            "exec": [
+              "const body = pm.response.json();",
+              "pm.test('sin token no hay datos', () => pm.expect(body.data == null || body.data.me == null).to.be.true);",
+              "pm.test('devuelve error de autenticación', () => pm.expect(pm.response.code === 401 || (body.errors && body.errors.length > 0)).to.be.true);"
+            ]
+          }
+        }
+      ]
+    }
+  ]
+}

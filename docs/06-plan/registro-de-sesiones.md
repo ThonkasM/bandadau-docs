@@ -1419,3 +1419,31 @@ Revisión de seis criterios del docente contra el código y la producción; lo e
 - **Push de Android (causas encontradas, en orden):** (1) en producción `PUSH_ENABLED=false`: el backend guardaba la notificación en la bandeja y marcaba el push como omitido sin llamar a Expo; ahora `true` (también en `.env.aws.example`); (2) la app no tenía `setNotificationHandler` (nada en primer plano) ni creaba el canal de Android (en Android 13+ sin canal no aparece el permiso); (3) el push de Expo no indicaba canal ni prioridad: ahora `channelId: default` y `priority: high` para aviso emergente. Verificado: tokens de Expo registrados por el APK, recibos de Expo `ok` (FCM aceptó) y la notificación presente en el panel del teléfono vía `adb dumpsys notification`. **NO confirmado:** el aviso emergente tras activar `PUSH_ENABLED`. APK `bandada-u-demo-push-fix.apk` con el arreglo de la app.
 - **Moderación:** una denuncia llegaba en vivo a `/moderation/` pero desaparecía al cambiar de pestaña. La cola del gateway solo trae medios marcados por IA y posts ya ocultos (umbral `REPORT_HIDE_THRESHOLD=3` denuncias); `buildEntries` del MFE solo armaba entradas desde esos ítems y descartaba las denuncias abiertas de posts visibles. Ahora las denuncias abiertas de posts no ocultos son entradas (`post:<id>`) y se resuelven por sus denuncias como los comentarios; 3 pruebas nuevas y un fixture corregido (47 pruebas). Publicado `mfe-moderation` 0.1.1 (misma versión: puede haber caché en CloudFront/navegador).
 
+
+### 2026-11-12 (tarde) — Mejoras de imágenes, perfil público, Postman y apagado de las nubes hasta el 17 nov
+
+**Agente:** Claude Code · **Repos:** `bandadau-frontend`, `bandadau-backend` (`media-service`), `bandadau-docs`.
+
+- **Imágenes:** las fotos de publicaciones se reducen a 1600 px y JPEG 0,8 en el dispositivo (HEIC/HEIF → JPEG; GIF intacto); avatares a 320 px / 0,8. El marco del feed usa la proporción real (9:16 … 1,91:1) y ya no recorta las verticales. `expo-image` cachea por la ruta del objeto (`src/lib/image-cache.ts`) porque las URLs prefirmadas cambian en cada respuesta. `media-service` firma las descargas con `Cache-Control: public, max-age=31536000, immutable`.
+- **Perfil público:** la cuadrícula de `app/user/[userId].tsx` colapsaba los cuadros (padding + imagen absoluta); ahora usa el mismo estilo que el perfil propio.
+- **Despliegue:** web publicada y APK regenerado. La imagen de `media-service` (`20261112-media1`) **se construyó en el propio EC2** (la subida a GHCR desde el Mac se atascaba) y **solo existe en ese servidor**: si se recrea el EC2 hay que reconstruirla o publicarla en GHCR.
+- **Postman:** colección `bandadau-docs/postman/` (login con `X-Bandada-Client: admin` para obtener `aud=bandada-admin`, seis consultas y pruebas).
+- **Presentación aplazada al martes 17 nov.** Para no pagar de más se **apagaron** (no se borraron) las tres VM: AWS `i-073eb25117f5b7f2f` (`bandada-aws`, detenida; no se tocaron las instancias de homy), Azure `bandada-azure` (desasignada), GCP `bandada-gcp` (detenida, `us-east4-a`). Docker y Tailscale arrancan solos y los contenedores están en `unless-stopped`.
+
+**Cómo retomar (antes del 17 nov):**
+1. Encender: AWS `aws ec2 start-instances --region us-east-1 --instance-ids i-073eb25117f5b7f2f` · Azure `az vm start -g bandada-rg -n bandada-azure` · GCP `gcloud compute instances start bandada-gcp --zone us-east4-a`.
+2. Tailscale en el Mac (`tailscaled --tun=userspace-networking --state=$HOME/.bandada-tailscale/tailscaled.state --socket=$HOME/.bandada-tailscale/tailscaled.sock --socks5-server=localhost:1055`) y verificar `status`; la IP elástica de AWS no cambia; las de Azure y GCP pueden cambiar (se llega por Tailscale).
+3. Comprobar salud: `https://api.bandadau.lat/health/live`, la app y el panel; revisar los contenedores con `docker ps` en cada VM.
+4. **Costo mientras están apagadas:** AWS unos $4–8/mes (disco + IPv4; cubierto por créditos), Azure unos $5–8/mes (créditos), GCP < $1/mes (sin créditos). Encendidas: ~$55–60 (AWS), ~$75 (Azure) y ~$13–15 (GCP) al mes.
+5. Pendientes de seguridad: revocar la clave de autenticación de Tailscale que apareció en la sesión, rotar la clave de servicio de Firebase y las contraseñas de MinIO/Mongo impresas, y cambiar la contraseña del administrador usada en Postman.
+
+### 2026-11-18 — Cierre: proyecto eliminado de la nube tras la entrega
+
+**Agente:** Claude Code · **Repos:** `bandadau-docs`, `bandadau-infra`.
+
+- **Entrega y demostración realizadas.** A petición del usuario se eliminó todo Bandada U de la nube para que no genere costos.
+- **AWS (cuenta compartida con otros proyectos):** `terraform destroy` (42 recursos: EC2 + disco + IP elástica, 4 tablas DynamoDB, 3 buckets S3, CloudFront + función + ACM, usuarios/rol IAM, grupo de seguridad y registros DNS) y borrado de la zona de Route 53 `bandadau.lat` (id `Z02250983VOLOJI80G4FS`). **No se tocaron** las instancias `development-homy-backend` y `production-homy-backend`, RDS, WAF, ECR, Secrets Manager ni las zonas `apphomy.com` e `intersectia.lat`.
+- **Azure:** grupo `bandada-rg` eliminado (queda `NetworkWatcherRG`, gratuito).
+- **GCP:** proyecto `bandadau-demo-2026` en `DELETE_REQUESTED` (borrado definitivo a los 30 días; recuperable con `gcloud projects undelete bandadau-demo-2026`).
+- **Pendiente del usuario:** quitar los nodos `bandada-*` y revocar las claves en Tailscale, devolver los servidores de nombres de `bandadau.lat` en Namecheap a «BasicDNS» (o dejar vencer el dominio), rotar secretos que aparecieron en sesiones previas y cambiar la contraseña del administrador usada en Postman.
+- **Para volver a desplegar:** el código y los contratos siguen en los 8 repos (sin push de los cambios de las últimas sesiones); `make aws-apply` recrea AWS, pero hay que reconstruir las imágenes (la de `media-service` solo estaba en el EC2), subir los modelos al bucket y resembrar datos.
